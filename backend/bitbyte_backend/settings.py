@@ -137,3 +137,17 @@ DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+
+# Customer-only voice product search. Audio is saved only as a temporary file per request.
+VOICE_SEARCH_ENABLED = os.environ.get("VOICE_SEARCH_ENABLED", "False").lower() in {"1", "true", "yes", "on"}
+WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "small")
+WHISPER_DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
+WHISPER_COMPUTE_TYPE = os.environ.get("WHISPER_COMPUTE_TYPE", "int8")
+VOICE_MAX_FILE_SIZE_MB = int(os.environ.get("VOICE_MAX_FILE_SIZE_MB", "10"))
+VOICE_MAX_DURATION_SECONDS = int(os.environ.get("VOICE_MAX_DURATION_SECONDS", "30"))
+VOICE_DEFAULT_LANGUAGE = os.environ.get("VOICE_DEFAULT_LANGUAGE", "ta")
+VOICE_SUPPORTED_LANGUAGES = [item.strip() for item in os.environ.get("VOICE_SUPPORTED_LANGUAGES", "ta,en").split(",") if item.strip()]
+VOICE_TRANSLATE_TO_ENGLISH = os.environ.get("VOICE_TRANSLATE_TO_ENGLISH", "False").lower() in {"1", "true", "yes", "on"}
+VOICE_MIN_INTENT_CONFIDENCE = float(os.environ.get("VOICE_MIN_INTENT_CONFIDENCE", "0.60"))
+VOICE_WEIGHT_TOLERANCE_GRAMS = float(os.environ.get("VOICE_WEIGHT_TOLERANCE_GRAMS", "0.5"))
+VOICE_RESULT_LIMIT = int(os.environ.get("VOICE_RESULT_LIMIT", "20"))

@@ -4,6 +4,7 @@ import api from "../api";
 import { getCartCountDB } from "../collection/card_section";
 
 const API_ORIGIN = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
+const CUSTOMER_VOICE_SEARCH_ENABLED = import.meta.env.VITE_CUSTOMER_VOICE_SEARCH_ENABLED !== "false";
 
 function Icon({ name, size = 20, filled = false }) {
   const common = {
@@ -1171,11 +1172,19 @@ export default function CustomerNavbar() {
   const [showSearchDrop, setShowSearchDrop] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(true);
+  const [voiceStatus, setVoiceStatus] = useState("idle");
+  const [voiceMessage, setVoiceMessage] = useState("");
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const [voiceClarification, setVoiceClarification] = useState(null);
+  const [voiceIntent, setVoiceIntent] = useState(null);
   const [ratesOpen, setRatesOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeMega, setActiveMega] = useState(null);
   const megaRefs = useRef({});
-  const recognitionRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const voiceChunksRef = useRef([]);
+  const voiceTimerRef = useRef(null);
+  const skipNextSearchRef = useRef(false);
 
   const scrollMega = (label, dir) => {
     const el = megaRefs.current[label];
@@ -1215,45 +1224,25 @@ export default function CustomerNavbar() {
   }, []);
 
   useEffect(() => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      setVoiceSupported(false);
-      return undefined;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = "en-IN";
-    recognition.interimResults = true;
-    recognition.continuous = false;
-
-    recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map((result) => result[0]?.transcript || "")
-        .join(" ")
-        .trim();
-
-      if (transcript) {
-        setSearchQuery(transcript);
-        setShowSearchDrop(true);
-      }
-    };
-
-    recognition.onerror = () => setVoiceListening(false);
-    recognition.onend = () => setVoiceListening(false);
-    recognitionRef.current = recognition;
-
+    const supported =
+      CUSTOMER_VOICE_SEARCH_ENABLED &&
+      typeof navigator !== "undefined" &&
+      !!navigator.mediaDevices?.getUserMedia &&
+      typeof MediaRecorder !== "undefined";
+    setVoiceSupported(supported);
     return () => {
-      recognition.onresult = null;
-      recognition.onerror = null;
-      recognition.onend = null;
-      recognition.stop();
-      recognitionRef.current = null;
+      if (voiceTimerRef.current) clearTimeout(voiceTimerRef.current);
+      if (mediaRecorderRef.current?.state === "recording") {
+        mediaRecorderRef.current.stop();
+      }
     };
   }, []);
 
   useEffect(() => {
+    if (skipNextSearchRef.current) {
+      skipNextSearchRef.current = false;
+      return undefined;
+    }
     const query = searchQuery.trim();
     if (query.length < 2) {
       setSearchResults([]);
@@ -1286,25 +1275,116 @@ export default function CustomerNavbar() {
     navigate(`/collection/all?search=${encodeURIComponent(query)}`);
   };
 
-  const startVoiceSearch = () => {
-    const recognition = recognitionRef.current;
-    if (!recognition) {
-      setVoiceSupported(false);
+  const handleVoiceResponse = (data) => {
+    setVoiceTranscript(data.transcript || "");
+    setVoiceIntent(data.intent || null);
+    setVoiceClarification(data.clarification || null);
+    skipNextSearchRef.current = true;
+    setSearchQuery(data.transcript || "");
+    setSearchResults(Array.isArray(data.products) ? data.products.slice(0, 8) : []);
+    setShowSearchDrop(true);
+
+    if (data.needs_clarification) {
+      setVoiceStatus("clarification");
+      setVoiceMessage(data.clarification?.question || "Please clarify your search.");
       return;
     }
 
+    setVoiceStatus("success");
+    setVoiceMessage(data.result_count ? `Found ${data.result_count} products from your voice search.` : "No matching products found from your voice search.");
+  };
+
+  const submitVoiceForm = async (formData) => {
+    setVoiceStatus("processing");
+    setVoiceMessage("Listening finished. Finding matching products...");
+    setSearchLoading(true);
+    setShowSearchDrop(true);
+    try {
+      const res = await api.post("/products/voice-search/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      handleVoiceResponse(res.data || {});
+    } catch (error) {
+      const message = error?.response?.data?.message || "Voice search is unavailable right now.";
+      setVoiceStatus("error");
+      setVoiceMessage(message);
+      setVoiceClarification(null);
+      setSearchResults([]);
+      setShowSearchDrop(true);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const submitVoiceBlob = (blob) => {
+    const formData = new FormData();
+    formData.append("audio", blob, "customer-voice-search.webm");
+    formData.append("language_hint", "ta");
+    submitVoiceForm(formData);
+  };
+
+  const submitVoiceClarification = (field, value) => {
+    if (!voiceIntent) return;
+    const formData = new FormData();
+    formData.append("clarification_context", JSON.stringify(voiceIntent));
+    formData.append("clarification_field", field);
+    formData.append("clarification_value", value);
+    formData.append("language_hint", voiceIntent.language || "ta");
+    submitVoiceForm(formData);
+  };
+
+  const startVoiceSearch = async () => {
+    if (!voiceSupported) return;
+
     if (voiceListening) {
-      recognition.stop();
+      mediaRecorderRef.current?.stop();
       setVoiceListening(false);
       return;
     }
 
     try {
-      setShowSearchDrop(false);
+      setVoiceStatus("requesting");
+      setVoiceMessage("Allow microphone access and speak your product request.");
+      setVoiceClarification(null);
+      setVoiceTranscript("");
+      setSearchResults([]);
+      setShowSearchDrop(true);
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorderOptions = MediaRecorder.isTypeSupported("audio/webm") ? { mimeType: "audio/webm" } : {};
+      const recorder = new MediaRecorder(stream, recorderOptions);
+      voiceChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data?.size) voiceChunksRef.current.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        if (voiceTimerRef.current) clearTimeout(voiceTimerRef.current);
+        setVoiceListening(false);
+        const blob = new Blob(voiceChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        if (!blob.size) {
+          setVoiceStatus("error");
+          setVoiceMessage("No audio was recorded. Please try again.");
+          return;
+        }
+        submitVoiceBlob(blob);
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
       setVoiceListening(true);
-      recognition.start();
+      setVoiceStatus("listening");
+      setVoiceMessage("Listening... tap the mic again when you finish.");
+      voiceTimerRef.current = setTimeout(() => {
+        if (recorder.state === "recording") recorder.stop();
+      }, 30000);
     } catch {
       setVoiceListening(false);
+      setVoiceStatus("error");
+      setVoiceMessage("Microphone permission is needed for customer voice search.");
+      setShowSearchDrop(true);
     }
   };
 
@@ -1521,6 +1601,79 @@ export default function CustomerNavbar() {
           overflow: auto;
         }
 
+
+        .voice-status-card {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          margin: 8px;
+          padding: 12px 14px;
+          border: 1px solid rgba(12,64,68,0.16);
+          border-radius: 16px;
+          background: linear-gradient(135deg, var(--bb-mist), var(--bb-bg));
+          color: var(--bb-teal-dark);
+          box-shadow: 0 12px 30px rgba(7,59,63,0.08);
+        }
+
+        .voice-status-card div {
+          display: grid;
+          gap: 3px;
+        }
+
+        .voice-status-card strong {
+          font-size: 12px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .voice-status-card span {
+          font-size: 13px;
+          font-weight: 850;
+          color: var(--bb-ink);
+        }
+
+        .voice-status-card em {
+          font-style: normal;
+          font-size: 12px;
+          color: var(--bb-muted);
+        }
+
+        .voice-status-card button,
+        .voice-clarify-grid button {
+          border: 1px solid rgba(12,64,68,0.22);
+          border-radius: 999px;
+          background: var(--bb-bg);
+          color: var(--bb-teal-dark);
+          font-weight: 950;
+          padding: 8px 12px;
+          cursor: pointer;
+          text-transform: capitalize;
+        }
+
+        .voice-status-error {
+          background: linear-gradient(135deg, rgba(201,32,53,0.08), var(--bb-bg));
+          border-color: rgba(201,32,53,0.24);
+        }
+
+        .voice-clarify-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          padding: 0 8px 10px;
+        }
+
+        .voice-clarify-grid button:hover,
+        .voice-status-card button:hover {
+          background: var(--bb-teal-dark);
+          color: var(--bb-bg);
+        }
+
+        .exact-result-note {
+          padding: 12px;
+          color: var(--bb-muted);
+          font-weight: 900;
+        }
         .exact-result {
           width: 100%;
           border: 0;
@@ -2243,7 +2396,12 @@ export default function CustomerNavbar() {
                 <Icon name="search" size={18} />
                 <input
                   value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onChange={(event) => {
+                    setVoiceStatus("idle");
+                    setVoiceMessage("");
+                    setVoiceClarification(null);
+                    setSearchQuery(event.target.value);
+                  }}
                   onFocus={() =>
                     searchResults.length && setShowSearchDrop(true)
                   }
@@ -2258,7 +2416,7 @@ export default function CustomerNavbar() {
                   type="button"
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={startVoiceSearch}
-                  disabled={!voiceSupported}
+                  disabled={!voiceSupported || voiceStatus === "processing" || voiceStatus === "requesting"}
                   title={
                     voiceSupported
                       ? voiceListening
@@ -2276,27 +2434,37 @@ export default function CustomerNavbar() {
 
               {showSearchDrop && (
                 <div className="exact-results">
-                  {searchLoading && (
-                    <div
-                      style={{
-                        padding: 12,
-                        color: "var(--bb-muted)",
-                        fontWeight: 900,
-                      }}
-                    >
-                      Searching...
+                  {voiceStatus !== "idle" && voiceMessage && (
+                    <div className={`voice-status-card voice-status-${voiceStatus}`}>
+                      <div>
+                        <strong>{voiceListening ? "Listening" : voiceStatus === "processing" ? "Processing" : "Voice search"}</strong>
+                        <span>{voiceMessage}</span>
+                        {voiceTranscript && <em>Heard: {voiceTranscript}</em>}
+                      </div>
+                      {voiceStatus === "error" && (
+                        <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={startVoiceSearch}>
+                          Try again
+                        </button>
+                      )}
                     </div>
                   )}
-                  {!searchLoading && searchResults.length === 0 && (
-                    <div
-                      style={{
-                        padding: 12,
-                        color: "var(--bb-muted)",
-                        fontWeight: 900,
-                      }}
-                    >
-                      No products found
+                  {voiceClarification?.options?.length > 0 && (
+                    <div className="voice-clarify-grid">
+                      {voiceClarification.options.map((option) => (
+                        <button
+                          type="button"
+                          key={option}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => submitVoiceClarification(voiceClarification.field, option)}
+                        >
+                          {option}
+                        </button>
+                      ))}
                     </div>
+                  )}
+                  {searchLoading && <div className="exact-result-note">Searching...</div>}
+                  {!searchLoading && !voiceClarification && searchResults.length === 0 && (
+                    <div className="exact-result-note">No products found</div>
                   )}
                   {searchResults.map((product) => (
                     <button

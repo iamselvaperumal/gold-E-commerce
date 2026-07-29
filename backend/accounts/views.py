@@ -13,6 +13,9 @@ from datetime import timedelta
 import razorpay
 import hmac
 import hashlib
+import json
+import os
+import tempfile
 from django.conf import settings
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -33,6 +36,123 @@ def get_target_status(order_count):
         return 'red'
 
 STATUS_SEVERITY = {'red': 0, 'orange': 1, 'yellow': 2, 'green': 3}
+
+class VoiceProductSearchView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if getattr(request.user, "role", None) != "customer":
+            return Response({"success": False, "code": "CUSTOMER_ONLY", "message": "Voice product search is available only for customers."}, status=403)
+
+        if not getattr(settings, "VOICE_SEARCH_ENABLED", False):
+            return Response({"success": False, "code": "VOICE_SEARCH_DISABLED", "message": "Voice search is not enabled."}, status=503)
+
+        from .voice_search import apply_clarification, clarification_payload, extract_intent, search_products, transcribe_audio
+
+        allowed_types = {
+            "audio/webm", "audio/wav", "audio/x-wav", "audio/mpeg", "audio/mp3",
+            "audio/mp4", "audio/m4a", "audio/ogg", "video/webm",
+        }
+        supported_languages = set(getattr(settings, "VOICE_SUPPORTED_LANGUAGES", ["ta", "en"]))
+        language_hint = request.data.get("language_hint") or getattr(settings, "VOICE_DEFAULT_LANGUAGE", "ta")
+        if language_hint not in supported_languages:
+            return Response({"success": False, "code": "UNSUPPORTED_LANGUAGE", "message": "This voice language is not supported yet."}, status=400)
+
+        audio = request.FILES.get("audio")
+        clarification_context = request.data.get("clarification_context")
+        clarification_field = request.data.get("clarification_field")
+        clarification_value = request.data.get("clarification_value")
+        temp_path = None
+
+        try:
+            if clarification_context and clarification_field and clarification_value:
+                try:
+                    intent = json.loads(clarification_context)
+                except json.JSONDecodeError:
+                    return Response({"success": False, "code": "BAD_CLARIFICATION_CONTEXT", "message": "Please try the voice search again."}, status=400)
+                intent = apply_clarification(intent, clarification_field, clarification_value)
+                products = search_products(intent, request=request)
+                return Response({
+                    "success": True,
+                    "transcript": intent.get("raw_text", ""),
+                    "intent": intent,
+                    "confidence": intent.get("confidence", 0),
+                    "needs_clarification": bool(clarification_payload(intent)),
+                    "clarification": clarification_payload(intent),
+                    "match_type": "clarified_voice_intent",
+                    "result_count": len(products),
+                    "products": products,
+                    "warnings": [],
+                })
+
+            if not audio:
+                return Response({"success": False, "code": "AUDIO_REQUIRED", "message": "Please record a voice search first."}, status=400)
+
+            if audio.content_type not in allowed_types:
+                return Response({"success": False, "code": "UNSUPPORTED_AUDIO", "message": "Please use a supported audio recording."}, status=400)
+
+            max_size = int(getattr(settings, "VOICE_MAX_FILE_SIZE_MB", 10)) * 1024 * 1024
+            if audio.size > max_size:
+                return Response({"success": False, "code": "AUDIO_TOO_LARGE", "message": "Voice recording is too large."}, status=400)
+
+            suffix_map = {
+                "audio/webm": ".webm", "video/webm": ".webm", "audio/wav": ".wav", "audio/x-wav": ".wav",
+                "audio/mpeg": ".mp3", "audio/mp3": ".mp3", "audio/mp4": ".m4a", "audio/m4a": ".m4a", "audio/ogg": ".ogg",
+            }
+            with tempfile.NamedTemporaryFile(prefix="voice-search-", suffix=suffix_map.get(audio.content_type, ".webm"), delete=False) as temp_file:
+                temp_path = temp_file.name
+                for chunk in audio.chunks():
+                    temp_file.write(chunk)
+
+            transcript, detected_language = transcribe_audio(temp_path, language_hint=language_hint)
+            if not transcript:
+                return Response({"success": False, "code": "EMPTY_TRANSCRIPT", "message": "I could not hear the product request clearly."}, status=422)
+
+            if detected_language not in supported_languages:
+                return Response({"success": False, "code": "UNSUPPORTED_LANGUAGE", "message": "This voice language is not supported yet.", "transcript": transcript}, status=400)
+
+            intent = extract_intent(transcript, language=detected_language)
+            clarification = clarification_payload(intent)
+            min_confidence = float(getattr(settings, "VOICE_MIN_INTENT_CONFIDENCE", 0.60))
+            if clarification or float(intent.get("confidence", 0)) < min_confidence:
+                return Response({
+                    "success": True,
+                    "transcript": transcript,
+                    "intent": intent,
+                    "confidence": intent.get("confidence", 0),
+                    "needs_clarification": True,
+                    "clarification": clarification or {
+                        "field": "category",
+                        "question": "Please tell me the jewellery type once more.",
+                        "options": ["rings", "necklaces", "bangles", "chains", "coins", "earrings"],
+                    },
+                    "match_type": "needs_clarification",
+                    "result_count": 0,
+                    "products": [],
+                    "warnings": ["low_confidence"] if not clarification else [],
+                })
+
+            products = search_products(intent, request=request)
+            return Response({
+                "success": True,
+                "transcript": transcript,
+                "intent": intent,
+                "confidence": intent.get("confidence", 0),
+                "needs_clarification": False,
+                "clarification": None,
+                "match_type": "voice_intent",
+                "result_count": len(products),
+                "products": products,
+                "warnings": [],
+            })
+        except RuntimeError as exc:
+            return Response({"success": False, "code": "VOICE_MODEL_ERROR", "message": str(exc)}, status=503)
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
 
 def worst_status(statuses):
     """Worst (lowest) status among children. No children => red."""

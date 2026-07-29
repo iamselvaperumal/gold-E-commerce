@@ -1,11 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
-import logo from '../assets/logo.png'
 import InternalRoleNavbar from '../collection/InternalRoleNavbar'
 import InternalRoleDashboardFrame from '../collection/InternalRoleDashboardFrame'
-import goldCoin from '../assets/gold-coin-transparent.png'
-import silverCoin from '../assets/silver-coin.png'
 
 const COLORS = ['#0C4044', '#CCA881', '#BDCFCE', '#BB8958', '#7A8987', '#9F6130']
 
@@ -340,7 +337,7 @@ function printAdminPersonCard(node, role, color, ancestors, superAdminEmail) {
       ${chainHtml}
       <div class="footer">Printed on ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
     </div>
-    <script>window.onload=()=>{window.print()}<\/script>
+    <script>window.onload=()=>{window.print()}</script>
     </body></html>
   `)
   printWindow.document.close()
@@ -473,7 +470,8 @@ function scheduleDealerHide(setActiveDealer) {
   }, 120)
 }
 
-function createDealerPopup(d, i, anchorEl, dark, subtext, text, currentAdmin) {
+// eslint-disable-next-line no-unused-vars -- retained for the legacy dealer hover popup markup
+function createDealerPopup(d, i, anchorEl, dark, subtext, text, currentAdmin, setActiveDealer) {
   removeDealerPopup()
   const c = DEALER_COLORS[i % DEALER_COLORS.length]
   const popupBg = dark ? 'linear-gradient(160deg,#091525,#E7EDEC)' : 'linear-gradient(160deg,#FDFDFC,#F3F3F0)'
@@ -565,7 +563,7 @@ function createDealerPopup(d, i, anchorEl, dark, subtext, text, currentAdmin) {
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
-  const [dark, setDark] = useState(false)
+  const [dark] = useState(false)
   const [dealers, setDealers] = useState([])
   const [admins, setAdmins] = useState([])
   const [selectedAdmin, setSelectedAdmin] = useState(null)
@@ -573,7 +571,7 @@ export default function AdminDashboard() {
   const [profileData, setProfileData] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [showHierarchy, setShowHierarchy] = useState(false)
-  const [activeDealer, setActiveDealer] = useState(null)
+  const [, setActiveDealer] = useState(null)
   const [msg, setMsg] = useState('')
   const [msgType, setMsgType] = useState('success')
   const [form, setForm] = useState(emptyForm)
@@ -588,10 +586,9 @@ export default function AdminDashboard() {
   const [unreadCount, setUnreadCount] = useState(0)
   // ── ADD after existing useState declarations ──
   const [myAdminId, setMyAdminId] = useState(null)
-  const [metalPrices, setMetalPrices] = useState({ gold24k: null, gold22k: null, silver: null })
-  const [metalLoading, setMetalLoading] = useState(false)
-  const [usdToInr, setUsdToInr] = useState(null)
-  const [dbRateDate, setDbRateDate] = useState(null)
+  const [, setMetalPrices] = useState({ gold24k: null, gold22k: null, silver: null })
+  const [, setMetalLoading] = useState(false)
+  const [, setDbRateDate] = useState(null)
   const [replyAnn, setReplyAnn] = useState(null)
   const [replyText, setReplyText] = useState('')
   const [replyLoading, setReplyLoading] = useState(false)
@@ -601,27 +598,6 @@ export default function AdminDashboard() {
   const [replyPopupAnnId, setReplyPopupAnnId] = useState(null)
   const [replyPopupPos, setReplyPopupPos] = useState({ top: 0, left: 0 })
   const wishTimerRef = useRef(null)
-
-  const [showRequestCoin, setShowRequestCoin] = useState(false)
-const [coinRequests, setCoinRequests] = useState([])
-const [coinReqLoading, setCoinReqLoading] = useState(false)
-const [approvingReqId, setApprovingReqId] = useState(null)
-const [approvingAll, setApprovingAll] = useState(false)
-const [coinReqMsg, setCoinReqMsg] = useState('')
-const [coinReqMsgType, setCoinReqMsgType] = useState('success')
-const [rejectingReqId, setRejectingReqId] = useState(null)
-const [rejectReason, setRejectReason] = useState('')
-const [rejectSubmitting, setRejectSubmitting] = useState(false)
-const [showBuyCoin, setShowBuyCoin] = useState(false)
-const [coinCart, setCoinCart] = useState([])
-const [coinBuyMsg, setCoinBuyMsg] = useState('')
-const [coinBuySubmitting, setCoinBuySubmitting] = useState(false)
-const [selCoinMetal, setSelCoinMetal] = useState('gold_22k')
-const [selCoinWeight, setSelCoinWeight] = useState('')
-const [selCoinQty, setSelCoinQty] = useState('')
-const [showStoredCoin, setShowStoredCoin] = useState(false)
-const [coinStock, setCoinStock] = useState([])
-const [coinStockLoading, setCoinStockLoading] = useState(false)
 
 
 
@@ -636,7 +612,6 @@ const [coinStockLoading, setCoinStockLoading] = useState(false)
   const subtext = dark ? '#D1DFDE' : '#7A8987'
   const accent = dark ? '#CCA881' : '#0C4044'
   const border = dark ? 'rgba(209,223,222,0.22)' : 'rgba(189,207,206,0.78)'
-  const glass = dark ? 'rgba(7,59,63,0.9)' : 'rgba(253,253,252,0.92)'
   const cardBg = dark ? 'rgba(12,64,68,0.88)' : 'rgba(253,253,252,0.96)'
   const cardBorder = dark ? '1px solid rgba(209,223,222,0.22)' : '1px solid rgba(189,207,206,0.72)'
   const inpBg = dark ? 'rgba(253,253,252,0.08)' : '#FDFDFC'
@@ -646,115 +621,112 @@ const [coinStockLoading, setCoinStockLoading] = useState(false)
 
   useEffect(() => {
     const canvas = canvasRef.current
+    if (!canvas) return undefined
+
     const ctx = canvas.getContext('2d')
-    let animationFrameId, particlesArray = []
+    let animationFrameId
+    let particlesArray = []
     const mouse = { x: null, y: null, radius: 150 }
-    const handleResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight }
-    const handleMouseMove = (e) => { mouse.x = e.x; mouse.y = e.y }
-    window.addEventListener('resize', handleResize)
-    window.addEventListener('mousemove', handleMouseMove)
-    handleResize()
-    class Particle {
-      constructor() {
-        this.x = Math.random() * canvas.width
-        this.y = Math.random() * canvas.height
-        this.size = Math.random() * 4 + 2
-        this.speedX = (Math.random() - 0.5) * 0.3
-        this.speedY = (Math.random() - 0.5) * 0.3
+
+    const handleResize = () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+    }
+
+    const handleMouseMove = (e) => {
+      mouse.x = e.x
+      mouse.y = e.y
+    }
+
+    const createParticle = () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      size: Math.random() * 4 + 2,
+      speedX: (Math.random() - 0.5) * 0.3,
+      speedY: (Math.random() - 0.5) * 0.3,
+    })
+
+    const updateParticle = (particle) => {
+      particle.x += particle.speedX
+      particle.y += particle.speedY
+      if (particle.x > canvas.width || particle.x < 0) particle.speedX *= -1
+      if (particle.y > canvas.height || particle.y < 0) particle.speedY *= -1
+
+      if (mouse.x !== null && mouse.y !== null) {
+        const dx = mouse.x - particle.x
+        const dy = mouse.y - particle.y
+        const distance = Math.sqrt(dx * dx + dy * dy) || 1
+        if (distance < mouse.radius) {
+          const force = (mouse.radius - distance) / mouse.radius
+          particle.x += (dx / distance) * force * 2
+          particle.y += (dy / distance) * force * 2
+        }
+      }
+    }
+
+    const drawParticle = (particle) => {
+      ctx.fillStyle = dark ? 'rgba(189, 207, 206, 0.9)' : 'rgba(12, 64, 68, 0.8)'
+      ctx.save()
+      ctx.translate(particle.x, particle.y)
+      ctx.beginPath()
+
+      const spikes = 5
+      const outerRadius = particle.size
+      const innerRadius = particle.size * 0.4
+
+      for (let i = 0; i < spikes * 2; i += 1) {
+        const radius = i % 2 === 0 ? outerRadius : innerRadius
+        const angle = (i * Math.PI) / spikes - Math.PI / 2
+        if (i === 0) ctx.moveTo(Math.cos(angle) * radius, Math.sin(angle) * radius)
+        else ctx.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius)
       }
 
-      update() {
-        this.x += this.speedX
-        this.y += this.speedY
-        if (this.x > canvas.width || this.x < 0) this.speedX *= -1
-        if (this.y > canvas.height || this.y < 0) this.speedY *= -1
+      ctx.closePath()
+      ctx.fill()
+      ctx.restore()
+    }
 
-        if (mouse.x !== null && mouse.y !== null) {
-          let dx = mouse.x - this.x
-          let dy = mouse.y - this.y
-          let distance = Math.sqrt(dx * dx + dy * dy)
-          if (distance < mouse.radius) {
-            const forceDirectionX = dx / distance
-            const forceDirectionY = dy / distance
-            const force = (mouse.radius - distance) / mouse.radius
-            this.x += forceDirectionX * force * 2
-            this.y += forceDirectionY * force * 2
+    const initParticles = () => {
+      particlesArray = Array.from({ length: 60 }, createParticle)
+    }
+
+    const connectParticles = () => {
+      for (let a = 0; a < particlesArray.length; a += 1) {
+        for (let b = a; b < particlesArray.length; b += 1) {
+          const dx = particlesArray[a].x - particlesArray[b].x
+          const dy = particlesArray[a].y - particlesArray[b].y
+          const distance = Math.sqrt(dx * dx + dy * dy)
+          if (distance < 150) {
+            ctx.strokeStyle = dark ? `rgba(189,207,206,${1 - distance / 150})` : `rgba(12,64,68,${0.5 - distance / 300})`
+            ctx.lineWidth = 0.5
+            ctx.beginPath()
+            ctx.moveTo(particlesArray[a].x, particlesArray[a].y)
+            ctx.lineTo(particlesArray[b].x, particlesArray[b].y)
+            ctx.stroke()
           }
         }
       }
-      
-      // ← update() ends here
-
-      draw() {
-        ctx.fillStyle = dark ? 'rgba(189, 207, 206, 0.9)' : 'rgba(12, 64, 68, 0.8)'
-        ctx.save()
-        ctx.translate(this.x, this.y)
-        ctx.beginPath()
-
-        const spikes = 5
-        const outerRadius = this.size * 1
-        const innerRadius = this.size * 0.4
-
-        for (let i = 0; i < spikes * 2; i++) {
-          const radius = i % 2 === 0 ? outerRadius : innerRadius
-          const angle = (i * Math.PI) / spikes - Math.PI / 2
-          if (i === 0) ctx.moveTo(Math.cos(angle) * radius, Math.sin(angle) * radius)
-          else ctx.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius)
-        }
-
-        ctx.closePath()
-        ctx.fill()
-        ctx.restore()
-      }
-
-    }
-    function init() { particlesArray = []; for (let i = 0; i < 60; i++)particlesArray.push(new Particle()) }
-    function connect() {
-      for (let a = 0; a < particlesArray.length; a++) for (let b = a; b < particlesArray.length; b++) {
-        let dx = particlesArray[a].x - particlesArray[b].x, dy = particlesArray[a].y - particlesArray[b].y, d = Math.sqrt(dx * dx + dy * dy)
-        if (d < 150) { ctx.strokeStyle = dark ? `rgba(189,207,206,${1 - d / 150})` : `rgba(12,64,68,${0.5 - d / 300})`; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(particlesArray[a].x, particlesArray[a].y); ctx.lineTo(particlesArray[b].x, particlesArray[b].y); ctx.stroke() }
-      }
-    }
-    function animate() { ctx.clearRect(0, 0, canvas.width, canvas.height); particlesArray.forEach(p => { p.update(); p.draw() }); connect(); animationFrameId = requestAnimationFrame(animate) }
-    init(); animate()
-
- init(); animate()
-
-    // ── PLANETS & COMETS ──────────────────────────────────────────
-    let planets = [], comets2 = [], planetAnimId
-
-    class Planet {
-      constructor(index, total) {
-        this.distFactor = 0.12 + (index / total) * 0.75
-        this.radius = 12 + Math.random() * 25
-        this.speed = (0.003 / (index + 1)) * 0.35
-        this.angle = Math.random() * Math.PI * 2
-        const hues = [200, 30, 180, 5, 280, 150, 45, 210, 330, 20]
-        this.color = `hsl(${hues[index % hues.length]}, 70%, 60%)`
-      }
-      update(c2, x2) {
-        this.angle += this.speed
-        const centerX = c2.width / 2
-        const centerY = c2.height / 2
-        const maxDim = Math.max(c2.width, c2.height)
-        const orbitRadius = maxDim * this.distFactor
-        const x = centerX + Math.cos(this.angle) * orbitRadius
-        const y = centerY + Math.sin(this.angle) * orbitRadius
-        x2.strokeStyle = dark ? 'rgba(253,253,252,0.04)' : 'rgba(17,24,23,0.04)'
-        x2.lineWidth = 1
-        x2.beginPath()
-        x2.arc(centerX, centerY, orbitRadius, 0, Math.PI * 2)
-        x2.stroke()
-        x2.shadowBlur = dark ? 20 : 5
-        x2.shadowColor = this.color
-        x2.fillStyle = this.color
-        x2.beginPath()
-        x2.arc(x, y, this.radius, 0, Math.PI * 2)
-        x2.fill()
-        x2.shadowBlur = 0
-      }
     }
 
+    const animateParticles = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      particlesArray.forEach((particle) => {
+        updateParticle(particle)
+        drawParticle(particle)
+      })
+      connectParticles()
+      animationFrameId = requestAnimationFrame(animateParticles)
+    }
+
+    window.addEventListener('resize', handleResize)
+    window.addEventListener('mousemove', handleMouseMove)
+    handleResize()
+    initParticles()
+    animateParticles()
+
+    let planetAnimId
+    let planets = []
+    let comets2 = []
     const canvas2 = document.createElement('canvas')
     canvas2.style.cssText = 'position:fixed;top:0;left:0;pointer-events:none;z-index:2;opacity:0.5;'
     canvas2.width = window.innerWidth
@@ -762,45 +734,105 @@ const [coinStockLoading, setCoinStockLoading] = useState(false)
     document.body.appendChild(canvas2)
     const ctx2 = canvas2.getContext('2d')
 
-    function createComet2() {
+    const createPlanet = (index, total) => {
+      const hues = [200, 30, 180, 5, 280, 150, 45, 210, 330, 20]
+      return {
+        distFactor: 0.12 + (index / total) * 0.75,
+        radius: 12 + Math.random() * 25,
+        speed: (0.003 / (index + 1)) * 0.35,
+        angle: Math.random() * Math.PI * 2,
+        color: `hsl(${hues[index % hues.length]}, 70%, 60%)`,
+      }
+    }
+
+    const drawPlanet = (planet) => {
+      planet.angle += planet.speed
+      const centerX = canvas2.width / 2
+      const centerY = canvas2.height / 2
+      const orbitRadius = Math.max(canvas2.width, canvas2.height) * planet.distFactor
+      const x = centerX + Math.cos(planet.angle) * orbitRadius
+      const y = centerY + Math.sin(planet.angle) * orbitRadius
+
+      ctx2.strokeStyle = dark ? 'rgba(253,253,252,0.04)' : 'rgba(17,24,23,0.04)'
+      ctx2.lineWidth = 1
+      ctx2.beginPath()
+      ctx2.arc(centerX, centerY, orbitRadius, 0, Math.PI * 2)
+      ctx2.stroke()
+      ctx2.shadowBlur = dark ? 20 : 5
+      ctx2.shadowColor = planet.color
+      ctx2.fillStyle = planet.color
+      ctx2.beginPath()
+      ctx2.arc(x, y, planet.radius, 0, Math.PI * 2)
+      ctx2.fill()
+      ctx2.shadowBlur = 0
+    }
+
+    const createComet2 = () => {
       const sides = ['top', 'bottom', 'left', 'right']
-      const side = sides[Math.floor(Math.random() * 4)]
-      let x, y, vx, vy
+      const side = sides[Math.floor(Math.random() * sides.length)]
       const speed = 0.4 + Math.random() * 0.3
-      if (side === 'top')         { x = Math.random() * canvas2.width;  y = -100;                vx = 0.1;  vy = speed  }
-      else if (side === 'bottom') { x = Math.random() * canvas2.width;  y = canvas2.height + 100; vx = -0.1; vy = -speed }
-      else if (side === 'left')   { x = -100;               y = Math.random() * canvas2.height;  vx = speed; vy = 0.1  }
-      else                        { x = canvas2.width + 100; y = Math.random() * canvas2.height;  vx = -speed; vy = -0.1 }
+      let x
+      let y
+      let vx
+      let vy
+
+      if (side === 'top') {
+        x = Math.random() * canvas2.width
+        y = -100
+        vx = 0.1
+        vy = speed
+      } else if (side === 'bottom') {
+        x = Math.random() * canvas2.width
+        y = canvas2.height + 100
+        vx = -0.1
+        vy = -speed
+      } else if (side === 'left') {
+        x = -100
+        y = Math.random() * canvas2.height
+        vx = speed
+        vy = 0.1
+      } else {
+        x = canvas2.width + 100
+        y = Math.random() * canvas2.height
+        vx = -speed
+        vy = -0.1
+      }
+
       return { x, y, vx, vy, history: [], tailLength: 130 }
     }
 
-    planets = Array.from({ length: 10 }, (_, i) => new Planet(i, 10))
+    planets = Array.from({ length: 10 }, (_, i) => createPlanet(i, 10))
     comets2 = Array.from({ length: 3 }, createComet2)
 
-    function drawPlanets() {
+    const drawPlanets = () => {
       ctx2.clearRect(0, 0, canvas2.width, canvas2.height)
       const colorAccent = dark ? '76, 201, 240' : '0, 95, 115'
-      planets.forEach(p => p.update(canvas2, ctx2))
-      comets2.forEach((c, i) => {
-        c.x += c.vx; c.y += c.vy
-        c.history.push({ x: c.x, y: c.y })
-        if (c.history.length > c.tailLength) c.history.shift()
-        if (c.x < -200 || c.x > canvas2.width + 200 || c.y < -200 || c.y > canvas2.height + 200)
-          comets2[i] = createComet2()
-        c.history.forEach((h, idx) => {
-          ctx2.fillStyle = `rgba(${colorAccent}, ${(idx / c.history.length) * 0.3})`
+      planets.forEach(drawPlanet)
+      comets2.forEach((comet, index) => {
+        comet.x += comet.vx
+        comet.y += comet.vy
+        comet.history.push({ x: comet.x, y: comet.y })
+        if (comet.history.length > comet.tailLength) comet.history.shift()
+        if (comet.x < -200 || comet.x > canvas2.width + 200 || comet.y < -200 || comet.y > canvas2.height + 200) {
+          comets2[index] = createComet2()
+        }
+        comet.history.forEach((point, pointIndex) => {
+          ctx2.fillStyle = `rgba(${colorAccent}, ${(pointIndex / comet.history.length) * 0.3})`
           ctx2.beginPath()
-          ctx2.arc(h.x, h.y, (idx / c.history.length) * 3, 0, Math.PI * 2)
+          ctx2.arc(point.x, point.y, (pointIndex / comet.history.length) * 3, 0, Math.PI * 2)
           ctx2.fill()
         })
       })
       planetAnimId = requestAnimationFrame(drawPlanets)
     }
 
-    const handleResize2 = () => { canvas2.width = window.innerWidth; canvas2.height = window.innerHeight }
+    const handleResize2 = () => {
+      canvas2.width = window.innerWidth
+      canvas2.height = window.innerHeight
+    }
+
     window.addEventListener('resize', handleResize2)
     drawPlanets()
-    // ── END PLANETS & COMETS ──────────────────────────────────────
 
     return () => {
       window.removeEventListener('resize', handleResize)
@@ -870,7 +902,7 @@ const [coinStockLoading, setCoinStockLoading] = useState(false)
       try {
         const adminRes = await api.get('/admins/list/')
         setAdmins(adminRes.data)
-      } catch { }
+      } catch (err) { console.error('admins list fallback error:', err) }
 
     } catch (err) {
       console.error('dealers error:', err)
@@ -1010,7 +1042,7 @@ const [coinStockLoading, setCoinStockLoading] = useState(false)
     try {
       const res = await api.get(`/announcements/${annId}/replies/`)
       setAnnReplies(prev => ({ ...prev, [annId]: res.data }))
-    } catch { }
+    } catch (err) { console.error('announcement replies error:', err) }
   }
 
   async function submitReply() {
@@ -1043,7 +1075,7 @@ const fetchMetalPrices = async () => {
       silver:  parseFloat(d.silver_999),
     })
     setDbRateDate(d.date)
-  } catch (e) {
+  } catch {
     setMetalPrices({ gold22k: null, gold24k: null, silver: null })
     setDbRateDate(null)
   }
@@ -1058,17 +1090,28 @@ const fetchMetalPrices = async () => {
       const lastSeen = parseInt(localStorage.getItem('adminAnnouncementSeen') || '0')
       const unread = sorted.filter(a => new Date(a.created_at).getTime() > lastSeen).length
       setUnreadCount(unread)
-    } catch { }
+    } catch (err) { console.error('announcements error:', err) }
   }
 
 useEffect(() => {
-  fetchDealers(); fetchAdmins(); fetchAnnouncements(); fetchProfile()
-  fetchMetalPrices()
-  const interval = setInterval(() => {
+  const loadDashboard = () => {
+    fetchDealers()
+    fetchAdmins()
+    fetchAnnouncements()
+    fetchProfile()
+    fetchMetalPrices()
+  }
+
+  const initialLoad = window.setTimeout(loadDashboard, 0)
+  const interval = window.setInterval(() => {
     fetchAnnouncements()
     fetchMetalPrices()
   }, 30000)
-  return () => clearInterval(interval)
+
+  return () => {
+    window.clearTimeout(initialLoad)
+    window.clearInterval(interval)
+  }
 }, [])
 
   const handleChange = e => {
@@ -1166,7 +1209,6 @@ const handleSubmit = async e => {
           { label: 'Dashboard', path: '/admin' },
           { label: 'Dealer Hierarchy', path: '/admin-hierarchy' },
           { label: 'Create Dealer', action: () => setShowForm(true) },
-          { label: 'Requests', action: () => setShowRequests(true) },
         ]}
         celebrationItems={[
           { label: "Today's Birthdays", action: () => navigate('/admin') },
@@ -1179,7 +1221,7 @@ const handleSubmit = async e => {
         coinItems={[
           { label: 'Buy Coin', path: '/buy-coin' },
           { label: 'Stored Coin', path: '/stored-coins' },
-          { label: 'Coin Requests', path: '/coin-requests-page', badge: coinRequests.filter(r => r.status === 'pending').length },
+          { label: 'Coin Requests', path: '/coin-requests-page' },
           { label: 'Coin Transactions', path: '/coin-transactions' },
         ]}
         reportItems={[
@@ -2167,207 +2209,13 @@ const handleSubmit = async e => {
           )}
         </div>
       </div>
-
-
-      {showBuyCoin && (
-  <div onClick={() => setShowBuyCoin(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(12px)', zIndex: 1400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-    <div onClick={e => e.stopPropagation()} style={{ background: '#0a1628', border: '1px solid rgba(251,191,36,0.4)', borderRadius: '24px', width: '95%', maxWidth: '560px', maxHeight: '88vh', overflowY: 'auto', padding: '28px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <div>
-          <div style={{ color: '#fbbf24', fontWeight: 900, fontSize: '16px' }}>Buy Coin — Request</div>
-          <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '3px' }}>Add coin types and weights, then send request to Super Admin</div>
-        </div>
-        <button onClick={() => setShowBuyCoin(false)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', borderRadius: '8px', padding: '6px 14px', cursor: 'pointer', fontSize: '12px' }}>Close</button>
-      </div>
-
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-        {['gold_22k', 'gold_24k', 'silver_999'].map(m => (
-          <div key={m} onClick={() => { setSelCoinMetal(m); setSelCoinWeight('') }}
-            style={{ flex: 1, textAlign: 'center', padding: '10px 0', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, fontSize: '12px',
-              background: selCoinMetal === m ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.05)',
-              border: `1.5px solid ${selCoinMetal === m ? 'rgba(251,191,36,0.7)' : 'rgba(255,255,255,0.1)'}`,
-              color: selCoinMetal === m ? '#fbbf24' : '#94a3b8' }}>
-            {COIN_METAL_LABELS_TEXT[m]}
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', marginBottom: '14px' }}>
-        <div>
-          <label style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>WEIGHT</label>
-          <select value={selCoinWeight} onChange={e => setSelCoinWeight(e.target.value)}
-            style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '11px 12px', color: '#fff', fontSize: '13px', outline: 'none' }}>
-            <option value="" style={{ background: '#0a1628', color: '#fff' }}>-- Select --</option>
-            {(selCoinMetal === 'silver_999' ? COIN_WEIGHTS_SILVER : COIN_WEIGHTS_GOLD).map(w => (
-              <option key={w.label} value={w.label} style={{ background: '#0a1628', color: '#fff' }}>{w.label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>QTY</label>
-          <input type="number" min="1" value={selCoinQty} onChange={e => setSelCoinQty(e.target.value)}
-            style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '11px 12px', color: '#fff', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-          <button onClick={addToCoinCart}
-            style={{ padding: '11px 18px', background: 'linear-gradient(90deg,#f472b6,#a78bfa)', border: 'none', borderRadius: '10px', color: '#3b0024', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>
-            + Add
-          </button>
-        </div>
-      </div>
-
-      {coinCart.length > 0 && (
-        <div style={{ marginBottom: '18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {coinCart.map((item, idx) => (
-            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px' }}>
-              <span style={{ color: '#fff', fontSize: '13px', fontWeight: 600 }}>{COIN_METAL_LABELS_TEXT[item.metal_type]} — {item.weight_label} × {item.qty}</span>
-              <button onClick={() => removeCoinCartItem(idx)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', borderRadius: '6px', padding: '3px 10px', cursor: 'pointer', fontSize: '11px' }}>✕</button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {coinBuyMsg && (
-        <div style={{
-          background: coinBuyMsg.startsWith('success:') ? 'rgba(74,222,128,0.1)' : 'rgba(239,68,68,0.1)',
-          border: `1px solid ${coinBuyMsg.startsWith('success:') ? 'rgba(74,222,128,0.3)' : 'rgba(239,68,68,0.3)'}`,
-          color: coinBuyMsg.startsWith('success:') ? '#4ade80' : '#f87171',
-          borderRadius: '10px', padding: '10px 14px', fontSize: '13px', marginBottom: '16px'
-        }}>
-          {coinBuyMsg.replace('success:', '').replace('error:', '')}
-        </div>
-      )}
-
-      <button
-        disabled={coinBuySubmitting || coinCart.length === 0}
-        onClick={submitCoinRequest}
-        style={{ width: '100%', padding: '14px', background: coinBuySubmitting || coinCart.length === 0 ? 'rgba(244,114,182,0.2)' : 'linear-gradient(90deg,#f472b6,#a78bfa)', border: 'none', borderRadius: '12px', fontWeight: 900, fontSize: '14px', color: '#3b0024', cursor: coinBuySubmitting || coinCart.length === 0 ? 'not-allowed' : 'pointer' }}>
-        {coinBuySubmitting ? 'Sending Request...' : 'Confirm & Send Request'}
-      </button>
-    </div>
-  </div>
-)}
-
-{showStoredCoin && (
-  <div onClick={() => setShowStoredCoin(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(10px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-    <div onClick={e => e.stopPropagation()} style={{ background: '#0a1628', border: '1px solid rgba(74,222,128,0.3)', borderRadius: '24px', width: '95%', maxWidth: '520px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{ padding: '22px 26px', borderBottom: '1px solid rgba(74,222,128,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <div style={{ color: '#4ade80', fontWeight: 800, fontSize: '15px' }}>Stored Coins</div>
-          <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '2px' }}>Coins approved by Super Admin</div>
-        </div>
-        <button onClick={() => setShowStoredCoin(false)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', borderRadius: '8px', padding: '6px 14px', cursor: 'pointer', fontSize: '12px' }}>Close</button>
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 26px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {coinStockLoading ? (
-          <div style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>Loading...</div>
-        ) : coinStock.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>No stock yet — send a Buy Coin request</div>
-        ) : coinStock.map(s => (
-          <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.25)', borderRadius: '12px' }}>
-            <div>
-              <div style={{ color: '#4ade80', fontWeight: 700, fontSize: '13px' }}>{COIN_METAL_LABELS_TEXT[s.metal_type]}</div>
-              <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{s.weight_label}</div>
-            </div>
-            <div style={{ color: '#fff', fontWeight: 900, fontSize: '20px', fontFamily: 'monospace' }}>{s.qty}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-)}
-
-{showRequestCoin && (
-  <div onClick={() => { setShowRequestCoin(false); setRejectingReqId(null); setRejectReason('') }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(10px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-    <div onClick={e => e.stopPropagation()} style={{ background: '#0a1628', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '24px', width: '95%', maxWidth: '620px', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{ padding: '22px 26px', borderBottom: '1px solid rgba(251,191,36,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <div style={{ color: '#fbbf24', fontWeight: 800, fontSize: '15px' }}>Coin Requests</div>
-          <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '2px' }}>Pending requests received from dealers</div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {!coinReqLoading && coinRequests.filter(r => r.status === 'pending').length > 0 && (
-            <button disabled={approvingAll} onClick={approveAllCoinRequests}
-              style={{ padding: '8px 16px', background: approvingAll ? 'rgba(74,222,128,0.2)' : 'linear-gradient(90deg,#4ade80,#22d3ee)', border: 'none', borderRadius: '10px', color: '#003b40', fontWeight: 800, fontSize: '11px', cursor: approvingAll ? 'not-allowed' : 'pointer' }}>
-              {approvingAll ? 'Approving...' : 'Approve All'}
-            </button>
-          )}
-          <button onClick={() => { setShowRequestCoin(false); setRejectingReqId(null); setRejectReason('') }} style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}>✕</button>
-        </div>
-      </div>
-
-      {coinReqMsg && (
-        <div style={{
-          margin: '14px 26px 0',
-          background: coinReqMsgType === 'success' ? 'rgba(74,222,128,0.1)' : 'rgba(239,68,68,0.1)',
-          border: `1px solid ${coinReqMsgType === 'success' ? 'rgba(74,222,128,0.3)' : 'rgba(239,68,68,0.3)'}`,
-          color: coinReqMsgType === 'success' ? '#4ade80' : '#f87171',
-          borderRadius: '10px', padding: '10px 14px', fontSize: '13px'
-        }}>
-          {coinReqMsg}
-        </div>
-      )}
-
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 26px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        {coinReqLoading ? (
-          <div style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>Loading...</div>
-        ) : coinRequests.filter(r => r.status === 'pending').length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>No pending coin requests</div>
-        ) : coinRequests.filter(r => r.status === 'pending').map(req => (
-          <div key={req.id} style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: '14px', padding: '16px 18px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
-              <div>
-                <div style={{ color: '#fbbf24', fontWeight: 700, fontSize: '13px', fontFamily: 'monospace' }}>{req.requested_by_id_str || req.requested_by_email}</div>
-                <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '2px' }}>{new Date(req.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true })}</div>
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button disabled={approvingReqId === req.id} onClick={() => approveCoinRequest(req.id)}
-                  style={{ padding: '9px 18px', background: approvingReqId === req.id ? 'rgba(74,222,128,0.2)' : 'linear-gradient(90deg,#4ade80,#22d3ee)', border: 'none', borderRadius: '10px', color: '#003b40', fontWeight: 800, fontSize: '12px', cursor: approvingReqId === req.id ? 'not-allowed' : 'pointer' }}>
-                  {approvingReqId === req.id ? 'Approving...' : 'Approve'}
-                </button>
-                <button onClick={() => { setRejectingReqId(rejectingReqId === req.id ? null : req.id); setRejectReason('') }}
-                  style={{ padding: '9px 18px', background: rejectingReqId === req.id ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: '10px', color: '#f87171', fontWeight: 800, fontSize: '12px', cursor: 'pointer' }}>
-                  Reject
-                </button>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {req.items.map(item => (
-                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontSize: '12px' }}>
-                  <span style={{ color: '#fff' }}>{COIN_METAL_LABELS_TEXT[item.metal_type]} — {item.weight_label}</span>
-                  <span style={{ color: '#fbbf24', fontWeight: 700 }}>× {item.qty}</span>
-                </div>
-              ))}
-            </div>
-
-            {rejectingReqId === req.id && (
-              <div style={{ marginTop: '12px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '10px', padding: '12px' }}>
-                <label style={{ display: 'block', color: '#f87171', fontSize: '11px', fontWeight: 700, marginBottom: '6px' }}>Reason for rejection</label>
-                <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={2}
-                  placeholder="Explain why this request is being rejected..."
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '10px 12px', color: '#fff', fontSize: '13px', outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: '10px' }} />
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button disabled={rejectSubmitting} onClick={() => rejectCoinRequest(req.id)}
-                    style={{ flex: 1, padding: '9px', background: rejectSubmitting ? 'rgba(239,68,68,0.2)' : 'linear-gradient(90deg,#ef4444,#f87171)', border: 'none', borderRadius: '8px', color: '#3b0000', fontWeight: 800, fontSize: '12px', cursor: rejectSubmitting ? 'not-allowed' : 'pointer' }}>
-                    {rejectSubmitting ? 'Rejecting...' : 'Confirm Reject'}
-                  </button>
-                  <button onClick={() => { setRejectingReqId(null); setRejectReason('') }}
-                    style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#94a3b8', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-)}
     </div>
   )
 }
+
+
+
+
 
 
 
