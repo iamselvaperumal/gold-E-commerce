@@ -59,6 +59,58 @@ const goldFilterCategories = [
   ['Coin & Bars', '/collection/coins?metal=gold'],
 ]
 
+const priceFilterOptions = [
+  ['Below Rs.25K', 'below25k'],
+  ['Rs.25K - Rs.50K', '25k-50k'],
+  ['Rs.50K - Rs.1L', '50k-1L'],
+  ['Above Rs.1L', 'above1L'],
+]
+
+const occasionFilterOptions = [
+  ['Wedding', 'Wedding'],
+  ['Birthday', 'Birthday'],
+  ['Anniversary', 'Anniversary'],
+  ['Daily Wear', 'Casual Wear'],
+  ['Office Wear', 'Office Wear'],
+  ['Traditional', 'Traditional Wear'],
+  ['Modern', 'Modern Wear'],
+  ['Gifting', 'Gifting'],
+]
+
+const genderFilterOptions = [
+  ['All', 'all'],
+  ['Women', 'women'],
+  ['Men', 'men'],
+  ['Kids', 'kids'],
+]
+
+const metalFilterOptions = [
+  ['Gold', 'gold'],
+  ['Diamond', 'diamond'],
+  ['Silver', 'silver'],
+  ['Platinum', 'platinum'],
+]
+
+const purityFilterOptions = {
+  gold: [['22K', '22k'], ['24K', '24k']],
+  diamond: [['18K', '18k'], ['22K', '22k']],
+  silver: [['999 Silver', '999']],
+  platinum: [['920 Platinum', '920']],
+  all: [['22K Gold', '22k'], ['24K Gold', '24k'], ['18K Diamond', '18k'], ['999 Silver', '999'], ['920 Platinum', '920']],
+}
+
+const collectionFilterOptions = [
+  ['New Arrivals', 'New'],
+  ['Bestseller', 'Bestseller'],
+  ['Premium', 'Premium'],
+  ['Bridal', 'Bridal'],
+  ['Statement', 'Statement'],
+  ['Stackable', 'Stackable'],
+  ['Limited', 'Limited'],
+  ['Temple', 'Temple'],
+  ['Antique', 'Antique'],
+]
+
 const promos = [
   { title: 'Daily Wear', text: 'Elegant designs for everyday beauty.', route: '/collection/all?dailywear=true', image: '/dailywera.png' },
   { title: 'Wedding Collection', text: 'Make your big day even more special.', route: '/collection/all?wedding=true', image: '/wedding_necklaces.jpg' },
@@ -237,11 +289,45 @@ function ProductCard({ product, rates, navigate }) {
   )
 }
 
-function FilterPanel({ activeRoute, navigate, metalFilter }) {
+function FilterGroup({ title, param, options, searchParams, navigate, clearKeys = [] }) {
+  const activeValue = searchParams.get(param) || ''
+
+  const applyFilter = value => {
+    const next = new URLSearchParams(searchParams)
+    clearKeys.forEach(key => next.delete(key))
+
+    if (activeValue === value || value === '') {
+      next.delete(param)
+    } else {
+      next.set(param, value)
+    }
+
+    const query = next.toString()
+    navigate(`/collection/all${query ? `?${query}` : ''}`)
+  }
+
+  return (
+    <div className="an-filter-group">
+      <div className="an-filter-title">{title} <span>^</span></div>
+      <div className="an-filter-options">
+        {options.map(([label, value]) => (
+          <button
+            className={activeValue === value ? 'active' : ''}
+            type="button"
+            key={`${param}-${value}`}
+            onClick={() => applyFilter(value)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function FilterPanel({ activeRoute, navigate, metalFilter, searchParams }) {
   const categories = metalFilter === 'gold' ? goldFilterCategories : filterCategories
-  const collapses = metalFilter === 'gold'
-    ? ['Price Range', 'Occasion', 'Gender', 'Purity', 'Collection']
-    : ['Price', 'Occasion', 'Gender', 'Metal Type', 'Collection']
+  const purityOptions = purityFilterOptions[metalFilter] || purityFilterOptions.all
 
   return (
     <aside className="an-filter">
@@ -259,12 +345,14 @@ function FilterPanel({ activeRoute, navigate, metalFilter }) {
           </button>
         ))}
       </div>
-      {collapses.map(label => (
-        <div className="an-filter-collapse" key={label}>
-          <strong>{label}</strong>
-          <span>+</span>
-        </div>
-      ))}
+      <FilterGroup title="Price Range" param="price" options={priceFilterOptions} searchParams={searchParams} navigate={navigate} />
+      <FilterGroup title="Occasion" param="occasion" options={occasionFilterOptions} searchParams={searchParams} navigate={navigate} clearKeys={['wedding', 'dailywear']} />
+      <FilterGroup title="Gender" param="gender" options={genderFilterOptions} searchParams={searchParams} navigate={navigate} />
+      {metalFilter !== 'gold' && (
+        <FilterGroup title="Metal Type" param="metal" options={metalFilterOptions} searchParams={searchParams} navigate={navigate} />
+      )}
+      <FilterGroup title="Purity" param="grade" options={purityOptions} searchParams={searchParams} navigate={navigate} />
+      <FilterGroup title="Collection" param="collection" options={collectionFilterOptions} searchParams={searchParams} navigate={navigate} />
       <button className="an-clear" type="button" onClick={() => navigate('/collection/all')}>Clear All Filters</button>
     </aside>
   )
@@ -300,6 +388,8 @@ export default function AllCollection() {
   const genderFilter = searchParams.get('gender')
   const occasionFilter = searchParams.get('occasion')
   const priceFilter = searchParams.get('price')
+  const gradeFilter = searchParams.get('grade')
+  const collectionFilter = searchParams.get('collection')
   const searchFilter = searchParams.get('search')
   const isWedding = searchParams.get('wedding') === 'true'
   const isDailywear = searchParams.get('dailywear') === 'true'
@@ -334,6 +424,8 @@ export default function AllCollection() {
         if (genderFilter) params.set('gender', genderFilter)
         if (occasionFilter) params.set('occasion', occasionFilter)
         if (priceFilter) params.set('price', priceFilter)
+        if (gradeFilter) params.set('grade', gradeFilter)
+        if (collectionFilter) params.set('collection', collectionFilter)
         if (searchFilter) params.set('search', searchFilter)
         if (isWedding) params.set('occasion', 'Wedding')
         if (isDailywear) params.set('occasion', 'Casual Wear')
@@ -347,7 +439,7 @@ export default function AllCollection() {
     }
 
     loadProducts()
-  }, [metalFilter, categoryFilter, genderFilter, occasionFilter, priceFilter, searchFilter, isWedding, isDailywear])
+  }, [metalFilter, categoryFilter, genderFilter, occasionFilter, priceFilter, gradeFilter, collectionFilter, searchFilter, isWedding, isDailywear])
 
   const visibleProducts = useMemo(() => {
     const list = [...products]
@@ -443,13 +535,13 @@ export default function AllCollection() {
           border-bottom: 1px solid #e7e1d9;
         }
 
-        .an-filter-section {
+        .an-filter-section,
+        .an-filter-group {
           padding: 14px 18px 16px;
           border-bottom: 1px solid #e7e1d9;
         }
 
-        .an-filter-title,
-        .an-filter-collapse {
+        .an-filter-title {
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -459,7 +551,14 @@ export default function AllCollection() {
           margin-bottom: 12px;
         }
 
-        .an-filter-section button {
+        .an-filter-options {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .an-filter-section button,
+        .an-filter-options button {
           width: 100%;
           border: 0;
           border-radius: 6px;
@@ -472,16 +571,31 @@ export default function AllCollection() {
           font-weight: 600;
         }
 
+        .an-filter-options button {
+          width: auto;
+          border: 1px solid #d9cdc0;
+          border-radius: 999px;
+          background: #FDFDFC;
+          color: #073B3F;
+          padding: 8px 12px;
+          font-size: 12px;
+          letter-spacing: .02em;
+          box-shadow: 0 8px 18px rgba(7, 59, 63, 0.05);
+        }
+
         .an-filter-section button.active,
-        .an-filter-section button:hover {
+        .an-filter-section button:hover,
+        .an-filter-options button.active,
+        .an-filter-options button:hover {
           background: #eaf1f0;
           color: #073B3F;
         }
 
-        .an-filter-collapse {
-          padding: 14px 18px;
-          margin: 0;
-          border-bottom: 1px solid #e7e1d9;
+        .an-filter-options button.active {
+          border-color: #0C4044;
+          background: #0C4044;
+          color: #FDFDFC;
+          box-shadow: 0 12px 24px rgba(12, 64, 68, 0.16);
         }
 
         .an-clear {
@@ -1040,7 +1154,7 @@ export default function AllCollection() {
 
       <main className="an-shell">
         <section className="an-layout">
-          <FilterPanel activeRoute={activeRoute} navigate={navigate} metalFilter={metalFilter} />
+          <FilterPanel activeRoute={activeRoute} navigate={navigate} metalFilter={metalFilter} searchParams={searchParams} />
 
           <div className="an-content">
             <div className="an-main-head">

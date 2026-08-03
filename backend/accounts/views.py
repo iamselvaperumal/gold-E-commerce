@@ -1119,6 +1119,16 @@ class JewelryProductView(APIView):
             qs = qs.filter(grade=grade)
 
         # ── Price filter (NEW) ──
+        collection = request.query_params.get('collection') or request.query_params.get('tag')
+        if collection:
+            qs = qs.filter(
+                Q(tag__icontains=collection) |
+                Q(description__icontains=collection) |
+                Q(wedding_category__icontains=collection) |
+                Q(occasion__icontains=collection) |
+                Q(name__icontains=collection)
+            )
+
         price = request.query_params.get('price')
         if price == 'below25k':
             qs = qs.filter(price__lt=25000)
