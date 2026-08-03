@@ -13,6 +13,7 @@ CATEGORY_ALIASES = {
     "rings": [
         "ring", "rings", "modhiram", "mothiram", "mothram", "motiram", "modiram",
         "modaram", "motharam", "modharam", "motharam", "mudhiram", "mudiram",
+        "moodhiram", "moodiram", "moodharam", "mothirum", "modhirum",
         "finger ring", "engagement ring", "wedding ring", "மோதிரம்",
     ],
     "necklaces": ["necklace", "necklaces", "haram", "aaram", "aram", "chain necklace", "நெக்லஸ்", "ஆரம்", "ஹாரம்"],
@@ -49,12 +50,15 @@ GRADE_ALIASES = {
 GENDER_ALIASES = {
     "men": [
         "men", "mens", "male", "gents", "boys", "boy", "magan", "maganu", "makhan",
-        "marumagan", "mapillai", "mappillai", "son", "son in law", "brother", "anna", "thambi",
+        "marumagan", "mapillai", "mappillai", "maapillai", "mappilai", "mapilai",
+        "manamagan", "mana magan", "groom", "bridegroom", "son", "son in law", "brother", "anna", "thambi",
         "ஆண்", "ஆண்கள்", "மகன்", "மருமகன்", "மாப்பிள்ளை",
     ],
     "women": [
         "women", "womens", "ladies", "lady", "female", "girls", "girl", "magal", "ponnu",
         "marumagal", "pethi", "paethi", "pethii", "pethiiii", "madhini", "mathini",
+        "manappen", "manapenn", "mana penn", "manaponnu", "mana ponnu", "manapponnu",
+        "bride", "bridal girl",
         "daughter", "daughter in law", "grand daughter", "granddaughter", "sister", "akka", "thangachi",
         "பெண்", "பெண்கள்", "மகள்", "மருமகள்", "பேத்தி",
     ],
@@ -66,7 +70,12 @@ GENDER_ALIASES = {
 }
 
 OCCASION_ALIASES = {
-    "wedding": ["wedding", "bridal", "marriage", "kalyanam", "திருமணம்"],
+    "wedding": [
+        "wedding", "bridal", "marriage", "kalyanam", "kalyana", "muhurtham",
+        "manappen", "manapenn", "mana penn", "manaponnu", "mana ponnu", "manapponnu",
+        "manamagan", "mana magan", "mapillai", "mappillai", "maapillai", "groom", "bride",
+        "திருமணம்",
+    ],
     "gifting": ["gift", "gifting", "birthday", "anniversary", "present", "பரிசு"],
     "daily": ["daily", "everyday", "office", "regular"],
 }
