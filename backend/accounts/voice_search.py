@@ -10,16 +10,16 @@ from .serializers import JewelryProductSerializer
 
 
 CATEGORY_ALIASES = {
-    "rings": ["ring", "rings", "modhiram", "mothiram", "finger ring", "engagement ring", "wedding ring", "மோதிரம்"],
-    "necklaces": ["necklace", "necklaces", "haram", "aaram", "chain necklace", "நெக்லஸ்", "ஆரம்", "ஹாரம்"],
-    "bangles": ["bangle", "bangles", "valayal", "valaial", "வளையல்"],
-    "bracelets": ["bracelet", "bracelets", "காப்பு"],
-    "earrings": ["earring", "earrings", "jimikki", "jhumka", "stud", "ear stud", "கம்மல்", "ஜிமிக்கி"],
-    "chains": ["chain", "chains", "sangili", "சங்கிலி"],
-    "pendants": ["pendant", "pendants", "locket", "டாலர்", "பெண்டண்ட்"],
-    "mangalsutra": ["mangalsutra", "thali", "thaali", "mangal sutra", "தாலி"],
+    "rings": ["ring", "rings", "modhiram", "mothiram", "mothram", "motiram", "modiram", "finger ring", "engagement ring", "wedding ring", "மோதிரம்"],
+    "necklaces": ["necklace", "necklaces", "haram", "aaram", "aram", "chain necklace", "நெக்லஸ்", "ஆரம்", "ஹாரம்"],
+    "bangles": ["bangle", "bangles", "valayal", "valaial", "valaiyal", "வளையல்"],
+    "bracelets": ["bracelet", "bracelets", "kaapu", "kappu", "காப்பு"],
+    "earrings": ["earring", "earrings", "jimikki", "jhumka", "stud", "ear stud", "kammal", "கம்மல்", "ஜிமிக்கி"],
+    "chains": ["chain", "chains", "sangili", "sankili", "சங்கிலி"],
+    "pendants": ["pendant", "pendants", "locket", "dollar", "talar", "டாலர்", "பெண்டண்ட்"],
+    "mangalsutra": ["mangalsutra", "thali", "thaali", "mangal sutra", "thaali kodi", "thali kodi", "தாலி"],
     "anklets": ["anklet", "anklets", "kolusu", "கொலுசு"],
-    "nosepin": ["nose pin", "nosepin", "mookuthi", "மூக்குத்தி"],
+    "nosepin": ["nose pin", "nosepin", "mookuthi", "mukuthi", "மூக்குத்தி"],
     "toerings": ["toe ring", "toe rings", "metti", "மெட்டி"],
     "cufflinks": ["cufflink", "cufflinks"],
     "brooches": ["brooch", "brooches"],
@@ -28,10 +28,10 @@ CATEGORY_ALIASES = {
 }
 
 METAL_ALIASES = {
-    "gold": ["gold", "22k", "24k", "916", "thangam", "தங்கம்"],
-    "silver": ["silver", "999", "velli", "வெள்ளி"],
-    "diamond": ["diamond", "vairam", "வைரம்"],
-    "platinum": ["platinum", "பிளாட்டினம்"],
+    "gold": ["gold", "22k", "24k", "916", "thangam", "thanga", "tanga", "thangam gold", "தங்கம்", "தங்க"],
+    "silver": ["silver", "999", "velli", "veli", "velliy", "வெள்ளி"],
+    "diamond": ["diamond", "vairam", "vair", "வைரம்"],
+    "platinum": ["platinum", "platina", "பிளாட்டினம்"],
 }
 
 GRADE_ALIASES = {
@@ -68,7 +68,7 @@ TEXT_NUMBER_WORDS = {
 STOPWORDS = {
     "show", "need", "want", "please", "find", "search", "give", "me", "for", "under", "above",
     "below", "around", "near", "product", "products", "jewellery", "jewelry", "design", "designs",
-    "venum", "kattu", "kaatu", "iruka", "irukku", "வேண்டும்", "காட்டு",
+    "venum", "kattu", "kaatu", "iruka", "irukku", "kudu", "paaru", "பாரு", "வேண்டும்", "காட்டு",
 }
 
 
@@ -192,6 +192,10 @@ def extract_intent(transcript, language=None):
 
     matched = sum(1 for item in [category, metal, grade, gender, occasion, weight, max_price] if item) + min(len(keywords), 2)
     confidence = min(0.95, 0.35 + matched * 0.12)
+    if category and metal:
+        confidence = max(confidence, 0.72)
+    elif category or keywords:
+        confidence = max(confidence, 0.62)
     missing_fields = []
     if not category and not keywords:
         missing_fields.append("product_type")
@@ -272,7 +276,8 @@ def _decimal_value(value):
 
 
 def search_products(intent, request=None):
-    qs = JewelryProduct.objects.filter(is_active=True).prefetch_related("images")
+    base_qs = JewelryProduct.objects.filter(is_active=True).prefetch_related("images")
+    qs = base_qs
     if intent.get("category"):
         qs = qs.filter(category=intent["category"])
     if intent.get("metal"):
@@ -289,8 +294,9 @@ def search_products(intent, request=None):
         qs = qs.filter(price__lte=max_price)
 
     keywords = intent.get("keywords") or []
+    keyword_qs = qs
     for word in keywords[:4]:
-        qs = qs.filter(
+        keyword_qs = keyword_qs.filter(
             Q(name__icontains=word) |
             Q(description__icontains=word) |
             Q(tag__icontains=word) |
@@ -298,7 +304,11 @@ def search_products(intent, request=None):
             Q(wedding_category__icontains=word)
         )
 
-    products = list(qs[:120])
+    # Spoken transliterations can leave harmless words behind as keywords.
+    # Prefer strict keyword matches, but fall back to category/metal matches instead of returning zero.
+    products = list(keyword_qs[:120])
+    if keywords and not products:
+        products = list(qs[:120])
     weight = _decimal_value(intent.get("weight_grams"))
     tolerance = Decimal(str(getattr(settings, "VOICE_WEIGHT_TOLERANCE_GRAMS", 0.5)))
 
