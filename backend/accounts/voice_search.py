@@ -47,9 +47,22 @@ GRADE_ALIASES = {
 }
 
 GENDER_ALIASES = {
-    "men": ["men", "mens", "male", "gents", "boys", "ஆண்கள்"],
-    "women": ["women", "womens", "ladies", "female", "girls", "பெண்கள்"],
-    "kids": ["kid", "kids", "children", "child", "baby", "kulanthai", "kulanthaiku", "kulandhai", "kulandhaiku", "குழந்தை"],
+    "men": [
+        "men", "mens", "male", "gents", "boys", "boy", "magan", "maganu", "makhan",
+        "marumagan", "mapillai", "mappillai", "son", "son in law", "brother", "anna", "thambi",
+        "ஆண்", "ஆண்கள்", "மகன்", "மருமகன்", "மாப்பிள்ளை",
+    ],
+    "women": [
+        "women", "womens", "ladies", "lady", "female", "girls", "girl", "magal", "ponnu",
+        "marumagal", "pethi", "paethi", "pethii", "pethiiii", "madhini", "mathini",
+        "daughter", "daughter in law", "grand daughter", "granddaughter", "sister", "akka", "thangachi",
+        "பெண்", "பெண்கள்", "மகள்", "மருமகள்", "பேத்தி",
+    ],
+    "kids": [
+        "kid", "kids", "children", "child", "baby", "infant", "toddler", "kulanthai",
+        "kulanthaiku", "kulandhai", "kulandhaiku", "kolandhai", "kolandhaiku", "kozhandhai",
+        "kuzhandhai", "kuzhanthai", "kutty", "குழந்தை", "குழந்தைக்கு",
+    ],
 }
 
 OCCASION_ALIASES = {
@@ -72,7 +85,8 @@ TEXT_NUMBER_WORDS = {
 STOPWORDS = {
     "show", "need", "want", "please", "find", "search", "give", "me", "for", "under", "above",
     "below", "around", "near", "product", "products", "jewellery", "jewelry", "design", "designs",
-    "venum", "kattu", "kaatu", "iruka", "irukku", "kudu", "paaru", "ennoda", "enoda", "enakku", "என்னோட",
+    "venum", "kattu", "kaatu", "iruka", "irukku", "kudu", "paaru", "ennoda", "enoda", "enakku", "avalukku",
+    "avanukku", "avanga", "ivanga", "namma", "என்னோட",
     "பாரு", "வேண்டும்", "காட்டு",
 }
 
@@ -199,10 +213,10 @@ def extract_intent(transcript, language=None):
     confidence = min(0.95, 0.35 + matched * 0.12)
     if category and metal:
         confidence = max(confidence, 0.72)
-    elif category or keywords:
+    elif category or gender or keywords:
         confidence = max(confidence, 0.62)
     missing_fields = []
-    if not category and not keywords:
+    if not category and not gender and not keywords:
         missing_fields.append("product_type")
     if category == "coins" and not metal:
         missing_fields.append("metal")
@@ -290,7 +304,7 @@ def search_products(intent, request=None):
     if intent.get("grade"):
         qs = qs.filter(grade__icontains=intent["grade"])
     if intent.get("gender"):
-        qs = qs.filter(gender__icontains=intent["gender"])
+        qs = qs.filter(Q(gender=intent["gender"]) | Q(gender="all") | Q(gender=""))
     if intent.get("occasion"):
         qs = qs.filter(Q(occasion__icontains=intent["occasion"]) | Q(wedding_category__icontains=intent["occasion"]))
 
@@ -325,6 +339,10 @@ def search_products(intent, request=None):
             value += 20
         if intent.get("grade") and intent["grade"] in (product.grade or "").lower():
             value += 8
+        if intent.get("gender") and product.gender == intent["gender"]:
+            value += 12
+        elif intent.get("gender") and product.gender == "all":
+            value += 4
         if product.tag:
             value += 3
         product_weight = _decimal_value(product.net_weight)
