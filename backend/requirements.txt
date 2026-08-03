@@ -14,5 +14,4 @@ django-cloudinary-storage==0.3.0
 django-filter==23.5
 razorpay
 python-dotenv==1.0.1
-faster-whisper==1.0.3
 rapidfuzz==3.9.7

@@ -14,6 +14,7 @@ import razorpay
 import hmac
 import hashlib
 import json
+import logging
 import os
 import tempfile
 from django.conf import settings
@@ -36,6 +37,7 @@ def get_target_status(order_count):
         return 'red'
 
 STATUS_SEVERITY = {'red': 0, 'orange': 1, 'yellow': 2, 'green': 3}
+logger = logging.getLogger(__name__)
 
 class VoiceProductSearchView(APIView):
     permission_classes = [IsAuthenticated]
@@ -58,6 +60,7 @@ class VoiceProductSearchView(APIView):
         if language_hint not in supported_languages:
             return Response({"success": False, "code": "UNSUPPORTED_LANGUAGE", "message": "This voice language is not supported yet."}, status=400)
 
+        transcript_text = (request.data.get("transcript") or "").strip()
         audio = request.FILES.get("audio")
         clarification_context = request.data.get("clarification_context")
         clarification_field = request.data.get("clarification_field")
@@ -85,8 +88,44 @@ class VoiceProductSearchView(APIView):
                     "warnings": [],
                 })
 
+            if transcript_text:
+                intent = extract_intent(transcript_text, language=language_hint)
+                clarification = clarification_payload(intent)
+                min_confidence = float(getattr(settings, "VOICE_MIN_INTENT_CONFIDENCE", 0.60))
+                if clarification or float(intent.get("confidence", 0)) < min_confidence:
+                    return Response({
+                        "success": True,
+                        "transcript": transcript_text,
+                        "intent": intent,
+                        "confidence": intent.get("confidence", 0),
+                        "needs_clarification": True,
+                        "clarification": clarification or {
+                            "field": "category",
+                            "question": "Please tell me the jewellery type once more.",
+                            "options": ["rings", "necklaces", "bangles", "chains", "coins", "earrings"],
+                        },
+                        "match_type": "voice_text_intent_needs_clarification",
+                        "result_count": 0,
+                        "products": [],
+                        "warnings": ["low_confidence"] if not clarification else [],
+                    })
+
+                products = search_products(intent, request=request)
+                return Response({
+                    "success": True,
+                    "transcript": transcript_text,
+                    "intent": intent,
+                    "confidence": intent.get("confidence", 0),
+                    "needs_clarification": False,
+                    "clarification": None,
+                    "match_type": "voice_text_intent",
+                    "result_count": len(products),
+                    "products": products,
+                    "warnings": [],
+                })
+
             if not audio:
-                return Response({"success": False, "code": "AUDIO_REQUIRED", "message": "Please record a voice search first."}, status=400)
+                return Response({"success": False, "code": "VOICE_TEXT_REQUIRED", "message": "Please speak your product request again."}, status=400)
 
             if audio.content_type not in allowed_types:
                 return Response({"success": False, "code": "UNSUPPORTED_AUDIO", "message": "Please use a supported audio recording."}, status=400)
@@ -146,7 +185,15 @@ class VoiceProductSearchView(APIView):
                 "warnings": [],
             })
         except RuntimeError as exc:
+            logger.exception("Voice search model error")
             return Response({"success": False, "code": "VOICE_MODEL_ERROR", "message": str(exc)}, status=503)
+        except Exception:
+            logger.exception("Voice search failed unexpectedly")
+            return Response({
+                "success": False,
+                "code": "VOICE_SEARCH_FAILED",
+                "message": "Voice search could not be completed right now. Please try again.",
+            }, status=503)
         finally:
             if temp_path and os.path.exists(temp_path):
                 try:

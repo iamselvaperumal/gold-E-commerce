@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api'
 
-const API_BASE = 'https://bitbyte-backend-f66f.onrender.com'
-
+const API_BASE = 'https://gold-e-commerce.onrender.com'
 const getImageUrl = img => {
   if (!img) return null
   if (img.startsWith('http://') || img.startsWith('https://')) return img

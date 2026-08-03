@@ -1181,6 +1181,7 @@ export default function CustomerNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeMega, setActiveMega] = useState(null);
   const megaRefs = useRef({});
+  const speechRecognitionRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const voiceChunksRef = useRef([]);
   const voiceTimerRef = useRef(null);
@@ -1224,14 +1225,16 @@ export default function CustomerNavbar() {
   }, []);
 
   useEffect(() => {
+    const SpeechRecognition =
+      typeof window !== "undefined" &&
+      (window.SpeechRecognition || window.webkitSpeechRecognition);
     const supported =
       CUSTOMER_VOICE_SEARCH_ENABLED &&
-      typeof navigator !== "undefined" &&
-      !!navigator.mediaDevices?.getUserMedia &&
-      typeof MediaRecorder !== "undefined";
+      typeof SpeechRecognition !== "undefined";
     setVoiceSupported(supported);
     return () => {
       if (voiceTimerRef.current) clearTimeout(voiceTimerRef.current);
+      speechRecognitionRef.current?.abort?.();
       if (mediaRecorderRef.current?.state === "recording") {
         mediaRecorderRef.current.stop();
       }
@@ -1294,15 +1297,13 @@ export default function CustomerNavbar() {
     setVoiceMessage(data.result_count ? `Found ${data.result_count} products from your voice search.` : "No matching products found from your voice search.");
   };
 
-  const submitVoiceForm = async (formData) => {
+  const submitVoiceForm = async (payload) => {
     setVoiceStatus("processing");
     setVoiceMessage("Listening finished. Finding matching products...");
     setSearchLoading(true);
     setShowSearchDrop(true);
     try {
-      const res = await api.post("/products/voice-search/", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const res = await api.post("/products/voice-search/", payload);
       handleVoiceResponse(res.data || {});
     } catch (error) {
       const message = error?.response?.data?.message || "Voice search is unavailable right now.";
@@ -1316,33 +1317,44 @@ export default function CustomerNavbar() {
     }
   };
 
-  const submitVoiceBlob = (blob) => {
-    const formData = new FormData();
-    formData.append("audio", blob, "customer-voice-search.webm");
-    formData.append("language_hint", "ta");
-    submitVoiceForm(formData);
+  const submitVoiceTranscript = (transcript) => {
+    const text = (transcript || "").trim();
+    if (!text) {
+      setVoiceStatus("error");
+      setVoiceMessage("I could not hear the product request clearly. Please try again.");
+      setShowSearchDrop(true);
+      return;
+    }
+    submitVoiceForm({ transcript: text, language_hint: "en" });
   };
 
   const submitVoiceClarification = (field, value) => {
     if (!voiceIntent) return;
-    const formData = new FormData();
-    formData.append("clarification_context", JSON.stringify(voiceIntent));
-    formData.append("clarification_field", field);
-    formData.append("clarification_value", value);
-    formData.append("language_hint", voiceIntent.language || "ta");
-    submitVoiceForm(formData);
+    submitVoiceForm({
+      clarification_context: JSON.stringify(voiceIntent),
+      clarification_field: field,
+      clarification_value: value,
+      language_hint: voiceIntent.language || "en",
+    });
   };
 
-  const startVoiceSearch = async () => {
+  const startVoiceSearch = () => {
     if (!voiceSupported) return;
 
     if (voiceListening) {
-      mediaRecorderRef.current?.stop();
+      speechRecognitionRef.current?.stop?.();
       setVoiceListening(false);
       return;
     }
 
     try {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-IN";
+      recognition.interimResults = false;
+      recognition.continuous = false;
+      recognition.maxAlternatives = 1;
+
       setVoiceStatus("requesting");
       setVoiceMessage("Allow microphone access and speak your product request.");
       setVoiceClarification(null);
@@ -1350,40 +1362,41 @@ export default function CustomerNavbar() {
       setSearchResults([]);
       setShowSearchDrop(true);
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorderOptions = MediaRecorder.isTypeSupported("audio/webm") ? { mimeType: "audio/webm" } : {};
-      const recorder = new MediaRecorder(stream, recorderOptions);
-      voiceChunksRef.current = [];
-
-      recorder.ondataavailable = (event) => {
-        if (event.data?.size) voiceChunksRef.current.push(event.data);
+      recognition.onstart = () => {
+        setVoiceListening(true);
+        setVoiceStatus("listening");
+        setVoiceMessage("Listening... say the product name, metal, category or weight.");
       };
 
-      recorder.onstop = () => {
-        stream.getTracks().forEach((track) => track.stop());
-        if (voiceTimerRef.current) clearTimeout(voiceTimerRef.current);
+      recognition.onresult = (event) => {
+        const transcript = event.results?.[0]?.[0]?.transcript || "";
         setVoiceListening(false);
-        const blob = new Blob(voiceChunksRef.current, { type: recorder.mimeType || "audio/webm" });
-        if (!blob.size) {
-          setVoiceStatus("error");
-          setVoiceMessage("No audio was recorded. Please try again.");
-          return;
-        }
-        submitVoiceBlob(blob);
+        if (voiceTimerRef.current) clearTimeout(voiceTimerRef.current);
+        submitVoiceTranscript(transcript);
       };
 
-      mediaRecorderRef.current = recorder;
-      recorder.start();
-      setVoiceListening(true);
-      setVoiceStatus("listening");
-      setVoiceMessage("Listening... tap the mic again when you finish.");
+      recognition.onerror = () => {
+        setVoiceListening(false);
+        if (voiceTimerRef.current) clearTimeout(voiceTimerRef.current);
+        setVoiceStatus("error");
+        setVoiceMessage("Microphone permission is needed for customer voice search.");
+        setShowSearchDrop(true);
+      };
+
+      recognition.onend = () => {
+        setVoiceListening(false);
+        if (voiceTimerRef.current) clearTimeout(voiceTimerRef.current);
+      };
+
+      speechRecognitionRef.current = recognition;
+      recognition.start();
       voiceTimerRef.current = setTimeout(() => {
-        if (recorder.state === "recording") recorder.stop();
-      }, 30000);
+        recognition.stop();
+      }, 12000);
     } catch {
       setVoiceListening(false);
       setVoiceStatus("error");
-      setVoiceMessage("Microphone permission is needed for customer voice search.");
+      setVoiceMessage("Voice search is not supported in this browser. Please use Chrome or type your search.");
       setShowSearchDrop(true);
     }
   };
