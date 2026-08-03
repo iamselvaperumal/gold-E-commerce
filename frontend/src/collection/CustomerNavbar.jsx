@@ -1259,7 +1259,21 @@ export default function CustomerNavbar() {
         const res = await api.get(
           `/jewelry-products/?search=${encodeURIComponent(query)}`,
         );
-        setSearchResults(Array.isArray(res.data) ? res.data.slice(0, 6) : []);
+        const directResults = Array.isArray(res.data) ? res.data.slice(0, 6) : [];
+        if (directResults.length > 0 || query.length < 4) {
+          setSearchResults(directResults);
+          setShowSearchDrop(true);
+          return;
+        }
+
+        const semanticRes = await api.post("/products/voice-search/", {
+          transcript: query,
+          language_hint: "en",
+        });
+        const semanticResults = Array.isArray(semanticRes.data?.products)
+          ? semanticRes.data.products.slice(0, 6)
+          : [];
+        setSearchResults(semanticResults);
         setShowSearchDrop(true);
       } catch {
         setSearchResults([]);
@@ -1271,23 +1285,70 @@ export default function CustomerNavbar() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const submitSearch = () => {
+  const submitSearch = async () => {
     const query = searchQuery.trim();
     if (!query) return;
     setShowSearchDrop(false);
+    try {
+      const semanticRes = await api.post("/products/voice-search/", {
+        transcript: query,
+        language_hint: "en",
+      });
+      const data = semanticRes.data || {};
+      if (data.result_count || data.intent?.category || data.intent?.metal || data.intent?.gender || data.intent?.occasion) {
+        skipNextSearchRef.current = true;
+        setSearchQuery("");
+        navigate(buildVoiceCollectionRoute(data));
+        return;
+      }
+    } catch {
+      // Fall back to the normal search results page when semantic search is unavailable.
+    }
     navigate(`/collection/all?search=${encodeURIComponent(query)}`);
+  };
+
+  const buildVoiceCollectionRoute = (data = {}) => {
+    const intent = data.intent || {};
+    const params = new URLSearchParams();
+    const firstProduct = Array.isArray(data.products) ? data.products[0] : null;
+    const occasionRouteMap = {
+      wedding: "Wedding",
+      gifting: "Birthday",
+      daily: "Casual Wear",
+    };
+
+    const setParam = (key, value) => {
+      if (value !== undefined && value !== null && String(value).trim()) {
+        params.set(key, String(value).trim().toLowerCase());
+      }
+    };
+
+    setParam("metal", intent.metal || firstProduct?.metal);
+    setParam("category", intent.category || firstProduct?.category);
+    setParam("gender", intent.gender);
+    if (intent.occasion) {
+      params.set("occasion", occasionRouteMap[intent.occasion] || intent.occasion);
+    }
+
+    if (intent.max_price) params.set("price", intent.max_price);
+
+    if (!params.toString() && data.transcript) {
+      params.set("search", data.transcript);
+    }
+
+    return `/collection/all${params.toString() ? `?${params.toString()}` : ""}`;
   };
 
   const handleVoiceResponse = (data) => {
     setVoiceTranscript(data.transcript || "");
     setVoiceIntent(data.intent || null);
     setVoiceClarification(data.clarification || null);
-    skipNextSearchRef.current = true;
-    setSearchQuery(data.transcript || "");
-    setSearchResults(Array.isArray(data.products) ? data.products.slice(0, 8) : []);
-    setShowSearchDrop(true);
 
     if (data.needs_clarification) {
+      skipNextSearchRef.current = true;
+      setSearchQuery(data.transcript || "");
+      setSearchResults(Array.isArray(data.products) ? data.products.slice(0, 8) : []);
+      setShowSearchDrop(true);
       setVoiceStatus("clarification");
       setVoiceMessage(data.clarification?.question || "Please clarify your search.");
       return;
@@ -1295,6 +1356,19 @@ export default function CustomerNavbar() {
 
     setVoiceStatus("success");
     setVoiceMessage(data.result_count ? `Found ${data.result_count} products from your voice search.` : "No matching products found from your voice search.");
+    setSearchResults([]);
+    setShowSearchDrop(false);
+
+    if (data.result_count || data.intent?.category || data.intent?.metal || data.intent?.gender || data.intent?.occasion) {
+      skipNextSearchRef.current = true;
+      setSearchQuery("");
+      navigate(buildVoiceCollectionRoute(data));
+      return;
+    }
+
+    skipNextSearchRef.current = true;
+    setSearchQuery(data.transcript || "");
+    setShowSearchDrop(true);
   };
 
   const submitVoiceForm = async (payload) => {

@@ -14,29 +14,51 @@ CATEGORY_ALIASES = {
         "ring", "rings", "modhiram", "mothiram", "mothram", "motiram", "modiram",
         "modaram", "motharam", "modharam", "motharam", "mudhiram", "mudiram",
         "moodhiram", "moodiram", "moodharam", "mothirum", "modhirum",
+        "mothir", "modhir", "mothra", "motra", "ringg", "riing", "rimg",
         "finger ring", "engagement ring", "wedding ring", "மோதிரம்",
     ],
-    "necklaces": ["necklace", "necklaces", "haram", "aaram", "aram", "chain necklace", "நெக்லஸ்", "ஆரம்", "ஹாரம்"],
-    "bangles": ["bangle", "bangles", "valayal", "valaial", "valaiyal", "வளையல்"],
-    "bracelets": ["bracelet", "bracelets", "kaapu", "kappu", "காப்பு"],
-    "earrings": ["earring", "earrings", "jimikki", "jhumka", "stud", "ear stud", "kammal", "கம்மல்", "ஜிமிக்கி"],
-    "chains": ["chain", "chains", "sangili", "sankili", "சங்கிலி"],
-    "pendants": ["pendant", "pendants", "locket", "dollar", "talar", "டாலர்", "பெண்டண்ட்"],
-    "mangalsutra": ["mangalsutra", "thali", "thaali", "mangal sutra", "thaali kodi", "thali kodi", "தாலி"],
-    "anklets": ["anklet", "anklets", "kolusu", "கொலுசு"],
-    "nosepin": ["nose pin", "nosepin", "mookuthi", "mukuthi", "மூக்குத்தி"],
-    "toerings": ["toe ring", "toe rings", "metti", "மெட்டி"],
-    "cufflinks": ["cufflink", "cufflinks"],
-    "brooches": ["brooch", "brooches"],
-    "tiepins": ["tie pin", "tiepin", "tie pins"],
-    "coins": ["coin", "coins", "bar", "bars", "காசு", "நாணயம்"],
+    "necklaces": [
+        "necklace", "necklaces", "neckles", "neckless", "necklas", "neklace", "nekles",
+        "haram", "aaram", "aram", "maalai", "malai", "attigai", "kasu malai",
+        "chain necklace", "necklace set", "neck set", "நெக்லஸ்", "ஆரம்", "ஹாரம்", "மாலை",
+    ],
+    "bangles": [
+        "bangle", "bangles", "bangels", "bangals", "valayal", "valaial", "valaiyal",
+        "valai", "vazhayal", "vazhaiyal", "kangan", "kada", "வளையல்",
+    ],
+    "bracelets": ["bracelet", "bracelets", "braclet", "breslet", "kaapu", "kappu", "kada", "காப்பு"],
+    "earrings": [
+        "earring", "earrings", "ear ring", "ear rings", "earing", "earings", "jimikki", "jhumka",
+        "jumka", "jhimki", "stud", "ear stud", "thodu", "thoodu", "kammal", "kadukkan",
+        "கம்மல்", "ஜிமிக்கி", "தோடு",
+    ],
+    "chains": [
+        "chain", "chains", "chein", "chane", "chainu", "neck chain", "gold chain",
+        "sangili", "sankili", "sangli", "sankli", "சங்கிலி",
+    ],
+    "pendants": ["pendant", "pendants", "pendent", "locket", "dollar", "dolar", "talar", "டாலர்", "பெண்டண்ட்"],
+    "mangalsutra": [
+        "mangalsutra", "mangal sutra", "mangalsuthra", "thali", "thaali", "thali chain",
+        "thaali kodi", "thali kodi", "mangalya", "mangalyam", "தாலி",
+    ],
+    "anklets": ["anklet", "anklets", "ankel", "ankel chain", "kolusu", "golusu", "கொலுசு"],
+    "nosepin": ["nose pin", "nosepin", "nose ring", "mookuthi", "mukuthi", "mukkuthi", "மூக்குத்தி"],
+    "toerings": ["toe ring", "toe rings", "toering", "metti", "mett", "மெட்டி"],
+    "cufflinks": ["cufflink", "cufflinks", "cuff link", "cuff links"],
+    "brooches": ["brooch", "brooches", "broach"],
+    "tiepins": ["tie pin", "tiepin", "tie pins", "tiepin"],
+    "coins": ["coin", "coins", "coinn", "coinu", "bar", "bars", "kasu", "kaasu", "nanayam", "naanayam", "காசு", "நாணயம்"],
 }
 
 METAL_ALIASES = {
-    "gold": ["gold", "22k", "24k", "916", "thangam", "thanga", "tanga", "thangam gold", "தங்கம்", "தங்க"],
-    "silver": ["silver", "999", "velli", "veli", "velliy", "வெள்ளி"],
-    "diamond": ["diamond", "vairam", "vair", "வைரம்"],
-    "platinum": ["platinum", "platina", "பிளாட்டினம்"],
+    "gold": [
+        "gold", "goold", "goldu", "22k", "24k", "916", "thangam", "thanga", "thangaa",
+        "tanga", "tangam", "tangaam", "thangam gold", "pon", "ponn", "poun", "swarna",
+        "தங்கம்", "தங்க", "பொன்",
+    ],
+    "silver": ["silver", "silvar", "silvr", "silwer", "999", "velli", "veli", "velliy", "velliya", "வெள்ளி"],
+    "diamond": ["diamond", "diamand", "daimond", "vairam", "vair", "வைரம்"],
+    "platinum": ["platinum", "platina", "plattinum", "பிளாட்டினம்"],
 }
 
 GRADE_ALIASES = {
@@ -52,6 +74,7 @@ GENDER_ALIASES = {
         "men", "mens", "male", "gents", "boys", "boy", "magan", "maganu", "makhan",
         "marumagan", "mapillai", "mappillai", "maapillai", "mappilai", "mapilai",
         "manamagan", "mana magan", "groom", "bridegroom", "son", "son in law", "brother", "anna", "thambi",
+        "husband", "purushan", "appa", "father", "dad", "mama", "machan",
         "ஆண்", "ஆண்கள்", "மகன்", "மருமகன்", "மாப்பிள்ளை",
     ],
     "women": [
@@ -60,12 +83,14 @@ GENDER_ALIASES = {
         "manappen", "manapenn", "mana penn", "manaponnu", "mana ponnu", "manapponnu",
         "bride", "bridal girl",
         "daughter", "daughter in law", "grand daughter", "granddaughter", "sister", "akka", "thangachi",
+        "wife", "manaivi", "amma", "mother", "mom", "aunty", "chithi", "periamma",
         "பெண்", "பெண்கள்", "மகள்", "மருமகள்", "பேத்தி",
     ],
     "kids": [
         "kid", "kids", "children", "child", "baby", "infant", "toddler", "kulanthai",
         "kulanthaiku", "kulandhai", "kulandhaiku", "kolandhai", "kolandhaiku", "kozhandhai",
-        "kuzhandhai", "kuzhanthai", "kutty", "குழந்தை", "குழந்தைக்கு",
+        "kuzhandhai", "kuzhanthai", "kulandai", "kulandaiku", "kutty", "papa", "paapa",
+        "baby boy", "baby girl", "குழந்தை", "குழந்தைக்கு",
     ],
 }
 
@@ -76,8 +101,8 @@ OCCASION_ALIASES = {
         "manamagan", "mana magan", "mapillai", "mappillai", "maapillai", "groom", "bride",
         "திருமணம்",
     ],
-    "gifting": ["gift", "gifting", "birthday", "anniversary", "present", "பரிசு"],
-    "daily": ["daily", "everyday", "office", "regular"],
+    "gifting": ["gift", "gifting", "birthday", "anniversary", "present", "surprise", "parisu", "பரிசு"],
+    "daily": ["daily", "everyday", "office", "regular", "simple", "casual", "light weight", "lightweight"],
 }
 
 TEXT_NUMBER_WORDS = {
@@ -95,7 +120,8 @@ STOPWORDS = {
     "show", "need", "want", "please", "find", "search", "give", "me", "for", "under", "above",
     "below", "around", "near", "product", "products", "jewellery", "jewelry", "design", "designs",
     "venum", "kattu", "kaatu", "iruka", "irukku", "kudu", "paaru", "ennoda", "enoda", "enakku", "avalukku",
-    "avanukku", "avanga", "ivanga", "namma", "என்னோட",
+    "avanukku", "avanga", "ivanga", "namma", "ku", "kku", "uku", "ukku", "oda", "la", "oru", "nalla",
+    "best", "latest", "new", "collection", "collections", "என்னோட",
     "பாரு", "வேண்டும்", "காட்டு",
 }
 
@@ -118,9 +144,13 @@ def _bool_setting(name, default=False):
 
 def normalize_text(value):
     value = (value or "").strip().lower()
-    value = re.sub(r"[₹,/-]", " ", value)
+    value = re.sub(r"[₹,/\-_.:;!?()\[\]{}\"']", " ", value)
     value = re.sub(r"\s+", " ", value)
     return value
+
+
+def _tokens(text):
+    return [word for word in re.split(r"\W+", text) if len(word) > 2]
 
 
 def _contains_alias(text, aliases):
@@ -139,15 +169,27 @@ def _best_alias(text, alias_map):
         if _contains_alias(text, aliases):
             return canonical
     if fuzz:
-        words = [word for word in re.split(r"\W+", text) if len(word) > 2]
+        words = _tokens(text)
         best = (None, 0)
         for canonical, aliases in alias_map.items():
             for alias in aliases:
+                alias_text = normalize_text(alias)
+                if not alias_text:
+                    continue
+                phrase_score = max(
+                    fuzz.token_set_ratio(text, alias_text),
+                    fuzz.partial_ratio(text, alias_text) if len(alias_text) >= 5 else 0,
+                )
+                if phrase_score > best[1]:
+                    best = (canonical, phrase_score)
                 for word in words:
-                    score = fuzz.partial_ratio(word, normalize_text(alias))
+                    score = max(
+                        fuzz.ratio(word, alias_text),
+                        fuzz.partial_ratio(word, alias_text) if len(alias_text) >= 5 else 0,
+                    )
                     if score > best[1]:
                         best = (canonical, score)
-        if best[1] >= 86:
+        if best[1] >= 84:
             return best[0]
     return None
 
@@ -305,17 +347,26 @@ def _decimal_value(value):
 
 def search_products(intent, request=None):
     base_qs = JewelryProduct.objects.filter(is_active=True).prefetch_related("images")
-    qs = base_qs
-    if intent.get("category"):
-        qs = qs.filter(category=intent["category"])
-    if intent.get("metal"):
-        qs = qs.filter(metal=intent["metal"])
-    if intent.get("grade"):
-        qs = qs.filter(grade__icontains=intent["grade"])
-    if intent.get("gender"):
-        qs = qs.filter(Q(gender=intent["gender"]) | Q(gender="all") | Q(gender=""))
-    if intent.get("occasion"):
-        qs = qs.filter(Q(occasion__icontains=intent["occasion"]) | Q(wedding_category__icontains=intent["occasion"]))
+
+    def filtered_queryset(include_gender=True, include_occasion=True):
+        filtered = base_qs
+        if intent.get("category"):
+            filtered = filtered.filter(category=intent["category"])
+        if intent.get("metal"):
+            filtered = filtered.filter(metal=intent["metal"])
+        if intent.get("grade"):
+            filtered = filtered.filter(grade__icontains=intent["grade"])
+        if include_gender and intent.get("gender"):
+            filtered = filtered.filter(Q(gender=intent["gender"]) | Q(gender="all") | Q(gender=""))
+        if include_occasion and intent.get("occasion"):
+            filtered = filtered.filter(
+                Q(occasion__icontains=intent["occasion"]) |
+                Q(wedding_category__icontains=intent["occasion"]) |
+                Q(tag__icontains=intent["occasion"])
+            )
+        return filtered
+
+    qs = filtered_queryset()
 
     max_price = _decimal_value(intent.get("max_price"))
     if max_price is not None:
@@ -337,6 +388,17 @@ def search_products(intent, request=None):
     products = list(keyword_qs[:120])
     if keywords and not products and intent.get("category"):
         products = list(qs[:120])
+    if not products and intent.get("occasion"):
+        products = list(filtered_queryset(include_occasion=False)[:120])
+    if not products and intent.get("gender"):
+        products = list(filtered_queryset(include_gender=False, include_occasion=False)[:120])
+    if not products and (intent.get("category") or intent.get("metal")):
+        relaxed = base_qs
+        if intent.get("category"):
+            relaxed = relaxed.filter(category=intent["category"])
+        if intent.get("metal"):
+            relaxed = relaxed.filter(metal=intent["metal"])
+        products = list(relaxed[:120])
     weight = _decimal_value(intent.get("weight_grams"))
     tolerance = Decimal(str(getattr(settings, "VOICE_WEIGHT_TOLERANCE_GRAMS", 0.5)))
 
