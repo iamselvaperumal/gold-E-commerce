@@ -10,7 +10,11 @@ from .serializers import JewelryProductSerializer
 
 
 CATEGORY_ALIASES = {
-    "rings": ["ring", "rings", "modhiram", "mothiram", "mothram", "motiram", "modiram", "finger ring", "engagement ring", "wedding ring", "மோதிரம்"],
+    "rings": [
+        "ring", "rings", "modhiram", "mothiram", "mothram", "motiram", "modiram",
+        "modaram", "motharam", "modharam", "motharam", "mudhiram", "mudiram",
+        "finger ring", "engagement ring", "wedding ring", "மோதிரம்",
+    ],
     "necklaces": ["necklace", "necklaces", "haram", "aaram", "aram", "chain necklace", "நெக்லஸ்", "ஆரம்", "ஹாரம்"],
     "bangles": ["bangle", "bangles", "valayal", "valaial", "valaiyal", "வளையல்"],
     "bracelets": ["bracelet", "bracelets", "kaapu", "kappu", "காப்பு"],
@@ -45,7 +49,7 @@ GRADE_ALIASES = {
 GENDER_ALIASES = {
     "men": ["men", "mens", "male", "gents", "boys", "ஆண்கள்"],
     "women": ["women", "womens", "ladies", "female", "girls", "பெண்கள்"],
-    "kids": ["kid", "kids", "children", "baby", "குழந்தை"],
+    "kids": ["kid", "kids", "children", "child", "baby", "kulanthai", "kulanthaiku", "kulandhai", "kulandhaiku", "குழந்தை"],
 }
 
 OCCASION_ALIASES = {
@@ -68,7 +72,8 @@ TEXT_NUMBER_WORDS = {
 STOPWORDS = {
     "show", "need", "want", "please", "find", "search", "give", "me", "for", "under", "above",
     "below", "around", "near", "product", "products", "jewellery", "jewelry", "design", "designs",
-    "venum", "kattu", "kaatu", "iruka", "irukku", "kudu", "paaru", "பாரு", "வேண்டும்", "காட்டு",
+    "venum", "kattu", "kaatu", "iruka", "irukku", "kudu", "paaru", "ennoda", "enoda", "enakku", "என்னோட",
+    "பாரு", "வேண்டும்", "காட்டு",
 }
 
 
@@ -307,7 +312,7 @@ def search_products(intent, request=None):
     # Spoken transliterations can leave harmless words behind as keywords.
     # Prefer strict keyword matches, but fall back to category/metal matches instead of returning zero.
     products = list(keyword_qs[:120])
-    if keywords and not products:
+    if keywords and not products and intent.get("category"):
         products = list(qs[:120])
     weight = _decimal_value(intent.get("weight_grams"))
     tolerance = Decimal(str(getattr(settings, "VOICE_WEIGHT_TOLERANCE_GRAMS", 0.5)))
